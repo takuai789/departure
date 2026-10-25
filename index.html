@@ -7,191 +7,138 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="出発時刻" />
-<meta name="theme-color" content="#f4f0e8" />
+<meta name="theme-color" content="#F2F2F7" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-v1-192.png" />
 <title>出発時刻 逆算アプリ</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%231c1a17'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='20'%20fill='none'%20stroke='%23f0a868'%20stroke-width='3'/%3E%3Cline%20x1='32'%20y1='32'%20x2='32'%20y2='18'%20stroke='%23f0a868'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Cline%20x1='32'%20y1='32'%20x2='43'%20y2='38'%20stroke='%23c8553d'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='3'%20fill='%23f0a868'/%3E%3C/svg%3E" />
 <style>
   :root {
-    --ink: #1c1a17;
-    --paper: #f4f0e8;
-    --accent: #c8553d;
-    --gold: #f0a868;
-    --muted: #6b6358;
+    --bg: #F2F2F7; --card: #FFFFFF; --fill: rgba(118,118,128,.12);
+    --ink: #1C1C1E; --muted: rgba(60,60,67,.6); --tertiary: rgba(60,60,67,.3); --sep: rgba(60,60,67,.18);
+    --accent: #E8643B; --accent-soft: #FDEBE4; --star: #FF9F0A;
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    /* 旧テーマの名前（スクリプト側の互換用） */
+    --paper: var(--bg); --gold: var(--accent);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
   body {
-    min-height: 100vh;
-    background: radial-gradient(circle at 20% 0%, #fbf8f1, var(--paper));
-    font-family: Georgia, 'Times New Roman', serif;
-    color: var(--ink);
-    padding: calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 60px);
+    min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: var(--sf); -webkit-font-smoothing: antialiased;
+    padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 48px);
   }
-  .shell { max-width: 460px; margin: 0 auto; }
-  .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .kicker { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); font-weight: 700; }
-  h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.1; letter-spacing: -0.5px; }
-  .sub { font-size: 14px; color: var(--muted); font-family: system-ui, sans-serif; }
-  header { margin-bottom: 26px; }
+  button, select, input, textarea { font-family: var(--sf); }
+  .shell { max-width: 520px; margin: 0 auto; }
+  header { margin: 8px 4px 18px; }
+  .brand-row { display: none; }
+  h1 { font-size: 34px; font-weight: 700; letter-spacing: .01em; line-height: 1.15; }
+  .sub { font-size: 15px; color: var(--muted); margin-top: 4px; }
 
-  .chips-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .chips-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
-  .edit-toggle {
-    background: transparent; border: 1px solid #d8cfbe; border-radius: 999px;
-    padding: 4px 14px; font-size: 13px; color: var(--muted); cursor: pointer;
-    font-family: system-ui, sans-serif;
-  }
-  .edit-toggle.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chips-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
+  .chips-title { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .edit-toggle { border: 0; background: none; color: var(--accent); font-size: 16px; font-weight: 500; padding: 4px 2px; cursor: pointer; }
+  .edit-toggle.active { font-weight: 700; }
 
-  /* chip列 (整理モード時のみ表示) */
-  .chips { display: none; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  /* 行き先の設定（編集モード） */
+  .chips { display: none; flex-direction: column; margin-bottom: 22px; background: var(--card); border-radius: 12px; overflow: hidden; }
   .chips.editing { display: flex; }
-  .row {
-    display: flex; align-items: center; gap: 8px; width: 100%;
-    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 12px;
-    padding: 8px 10px; font-family: system-ui, sans-serif;
-  }
-  .row .row-name { flex: 1; font-size: 15px; }
-  .row .row-meta { font-size: 12px; color: var(--muted); }
-  .move-btn, .del-btn {
-    border: none; background: transparent; cursor: pointer; font-size: 17px;
-    width: 34px; height: 34px; border-radius: 8px; line-height: 1;
-  }
-  .move-btn { color: var(--ink); }
-  .move-btn:hover { background: #efe9dc; }
-  .move-btn:disabled { opacity: .25; cursor: default; }
-  .del-btn { color: #a13; }
-  .del-btn:hover { background: #f6e3df; }
-  .add-btn-full {
-    display: block; width: 100%; margin-top: 4px;
-    padding: 10px; border-radius: 12px;
-    border: 1.5px dashed var(--accent); background: transparent; color: var(--accent);
-    cursor: pointer; font-size: 14px; font-family: system-ui, sans-serif;
-  }
+  .row { display: flex; align-items: center; gap: 4px; width: 100%; padding: 8px 8px 8px 12px; border-bottom: .5px solid var(--sep); background: var(--card); }
+  .row .row-name { flex: 1; font-size: 17px; }
+  .row .row-meta { font-size: 14px; color: var(--muted); margin-right: 4px; }
+  .move-btn, .del-btn { border: none; background: transparent; cursor: pointer; font-size: 17px; width: 36px; height: 36px; border-radius: 8px; line-height: 1; }
+  .move-btn { color: var(--accent); }
+  .move-btn:disabled { color: var(--tertiary); cursor: default; }
+  .del-btn { color: #FF3B30; }
+  .add-btn-full { display: block; width: 100%; padding: 14px; border: 0; background: var(--card); color: var(--accent); font-size: 17px; text-align: left; cursor: pointer; }
+  .add-btn-full:active, .move-btn:active, .del-btn:active { background: var(--fill); }
 
-  /* 比較グリッド: 狭い時1列、広い時2列 */
-  .compare-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
-  .compare-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .compare-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+  .compare-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .compare-col2 { display: none; }
-  .dest-select {
-    width: 100%; padding: 10px 12px; font-size: 16px;
-    font-family: system-ui, sans-serif; border: 1px solid #d8cfbe;
-    border-radius: 10px; background: #fffdf8; color: var(--ink);
-    -webkit-appearance: none; appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%236b6358' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
-  }
-  .dest-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-
   @media (min-width: 820px) {
     .shell { max-width: 900px; }
     .compare-grid { grid-template-columns: 1fr 1fr; }
     .compare-col2 { display: flex; }
   }
 
-  .card {
-    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 16px;
-    padding: 18px;
+  /* 入力カード：行き先と時刻を1枚のグループに見せる */
+  .card { background: var(--card); border-radius: 12px; padding: 12px 16px; }
+  .label { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+  .dest-select {
+    width: 100%; padding: 4px 28px 4px 0; font-size: 20px; font-weight: 600;
+    border: 0; background: transparent; color: var(--ink);
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23E8643B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 2px center; background-size: 16px;
   }
-
-  /* お気に入り */
-  .fav-sec { margin-top: 30px; }
-  .fav-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .fav-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
-  .fav-list { display: flex; flex-wrap: wrap; gap: 8px; }
-  .fav-item {
-    display: inline-flex; align-items: baseline; gap: 8px;
-    background: #fff8ec; border: 1.5px solid var(--gold); border-radius: 12px;
-    padding: 9px 14px; cursor: pointer; font-family: system-ui, sans-serif;
-    transition: transform .12s ease, border-color .15s ease;
-  }
-  .fav-item:hover { transform: translateY(-1px); border-color: var(--accent); }
-
-  /* 履歴 */
-  .history-sec { margin-top: 34px; }
-  .history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .history-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
-  .clear-btn {
-    background: transparent; border: 1px solid #d8cfbe; border-radius: 999px;
-    padding: 4px 14px; font-size: 12px; color: var(--muted); cursor: pointer;
-    font-family: system-ui, sans-serif;
-  }
-  .clear-btn:hover { background: #efe9dc; }
-  .history-list { display: flex; flex-wrap: wrap; gap: 8px; }
-  .hist-item {
-    display: inline-flex; align-items: baseline; gap: 8px;
-    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 12px;
-    padding: 9px 14px; cursor: pointer; font-family: system-ui, sans-serif;
-    transition: transform .12s ease, border-color .15s ease;
-  }
-  .hist-item:hover { transform: translateY(-1px); border-color: var(--accent); }
-  .hist-name { font-size: 14px; }
-  .hist-times { font-size: 12px; color: var(--muted); font-family: 'Courier New', monospace; }
-  .hist-leave { color: var(--accent); font-weight: 700; }
-  .star-btn {
-    border: none; background: transparent; cursor: pointer;
-    font-size: 15px; line-height: 1; padding: 2px 4px; margin-left: 2px;
-    border-radius: 6px; opacity: .35; transition: opacity .15s ease, transform .12s ease;
-  }
-  .star-btn:hover { opacity: 1; transform: scale(1.15); }
-  .star-btn.on { opacity: 1; }
-  .history-empty { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; padding: 4px 0; }
-  .label {
-    display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted);
-    font-family: system-ui, sans-serif; margin-bottom: 10px;
-  }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .time-select { display: flex; align-items: center; gap: 6px; }
+  .dest-select:focus, .time-select select:focus, input:focus, textarea:focus { outline: none; }
+  .time-select { display: flex; align-items: center; gap: 2px; }
   .time-select select {
-    font-size: 30px; font-family: 'Courier New', monospace; font-weight: 700;
-    color: var(--ink); background: transparent; border: none; cursor: pointer;
-    -webkit-appearance: none; appearance: none; padding: 2px 4px;
+    font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink);
+    background: var(--fill); border: none; border-radius: 10px; cursor: pointer;
+    -webkit-appearance: none; appearance: none; padding: 4px 12px; text-align: center;
   }
-  .time-select select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-  .time-select .colon { font-size: 30px; font-family: 'Courier New', monospace; font-weight: 700; }
+  .time-select .colon { font-size: 28px; font-weight: 600; padding: 0 4px; color: var(--muted); }
 
-  .result {
-    background: var(--ink); color: var(--paper); border-radius: 20px; padding: 26px 22px;
-    animation: rise .35s ease;
-  }
-  .result-label { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 2px; opacity: .6; }
-  .big-time { font-size: 64px; font-weight: 700; line-height: 1; margin: 4px 0 18px; font-family: 'Courier New', monospace; color: var(--gold); }
-  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; font-family: system-ui, sans-serif; opacity: .85; }
-  .flow-item { display: flex; flex-direction: column; line-height: 1.3; }
-  .flow-item small { opacity: .7; }
-  .arrow { opacity: .4; }
-  .edit-link { margin-top: 20px; display: inline-flex; align-items: center; gap: 5px; background: none; border: none; color: var(--gold); font-size: 13px; cursor: pointer; font-family: system-ui, sans-serif; }
+  /* 結果 */
+  .result { background: var(--accent); color: #fff; border-radius: 16px; padding: 18px 18px 14px; animation: rise .3s ease; box-shadow: 0 8px 24px -12px rgba(232,100,59,.6); }
+  .result-label { font-size: 14px; font-weight: 600; opacity: .85; }
+  .big-time { font-size: 64px; font-weight: 700; line-height: 1.05; margin: 2px 0 12px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; color: #fff; }
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; background: rgba(255,255,255,.16); border-radius: 10px; padding: 8px 12px; }
+  .flow-item { display: flex; flex-direction: column; line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .flow-item small { font-weight: 500; opacity: .8; font-size: 11.5px; }
+  .arrow { opacity: .6; }
+  .edit-link { margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: #fff; opacity: .9; font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 0; }
+  .result-note { margin-top: 10px; padding-top: 10px; border-top: .5px solid rgba(255,255,255,.35); font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .note-mark { margin-right: 6px; opacity: .8; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); background: var(--card); border-radius: 12px; }
 
-  .empty { padding: 30px; text-align: center; color: var(--muted); font-family: system-ui, sans-serif; }
+  /* お気に入り・履歴 */
+  .fav-sec, .history-sec, .data-sec { margin-top: 26px; }
+  .fav-head, .history-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
+  .fav-title, .history-title { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .clear-btn { border: 0; background: none; color: var(--accent); font-size: 15px; cursor: pointer; padding: 2px; }
+  .fav-list, .history-list { display: flex; flex-direction: column; background: var(--card); border-radius: 12px; overflow: hidden; }
+  .fav-item, .hist-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 10px 11px 16px; border-bottom: .5px solid var(--sep); cursor: pointer; }
+  .fav-item:last-child, .hist-item:last-child { border-bottom: 0; }
+  .fav-item:active, .hist-item:active { background: var(--fill); }
+  .fav-item > span, .hist-item > span { flex: 1; min-width: 0; justify-content: space-between; }
+  .hist-name { font-size: 17px; }
+  .hist-times { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hist-leave { color: var(--accent); font-weight: 700; }
+  .star-btn { border: none; background: transparent; cursor: pointer; font-size: 20px; line-height: 1; padding: 4px 6px; color: var(--tertiary); }
+  .star-btn.on { color: var(--star); }
+  .history-empty { font-size: 14px; color: var(--muted); padding: 14px 16px; }
 
-  footer { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 34px; font-size: 12px; color: #8a8175; font-family: 'Courier New', monospace; letter-spacing: .5px; }
+  /* データ */
+  .data-row { display: flex; flex-direction: column; background: var(--card); border-radius: 12px; overflow: hidden; margin-top: 0; }
+  .data-row .clear-btn { text-align: left; padding: 13px 16px; font-size: 17px; border-bottom: .5px solid var(--sep); }
+  .data-row .clear-btn:last-of-type { border-bottom: 0; }
+  .data-note { font-size: 13px; color: var(--muted); margin: 6px 16px 0; line-height: 1.5; }
 
-  .overlay { position: fixed; left: 0; right: 0; top: 0; bottom: var(--kb, 0px); background: rgba(28,26,23,.4); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
+  footer { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 30px; font-size: 12px; color: var(--tertiary); }
+
+  /* シート */
+  .overlay { position: fixed; left: 0; right: 0; top: 0; bottom: var(--kb, 0px); background: rgba(0,0,0,.3); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
   .overlay.open { display: flex; }
-  .modal { background: var(--paper); width: 100%; max-width: 460px; border-radius: 20px 20px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom) + 24px); animation: rise .25s ease; max-height: calc(var(--app-height, 100vh) - env(safe-area-inset-top) - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .modal { background: var(--bg); width: 100%; max-width: 520px; border-radius: 14px 14px 0 0; padding: 10px 16px calc(env(safe-area-inset-bottom) + 20px); animation: up .28s cubic-bezier(.32,.72,0,1); max-height: calc(var(--app-height, 100vh) - env(safe-area-inset-top) - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .modal::before { content: ""; display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--tertiary); margin: 0 auto 10px; }
   body.keyboard-open .modal { padding-bottom: 16px; }
-  .data-sec { margin-top: 34px; }
-  .data-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .data-note { font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; margin-top: 6px; }
-  #updateBanner { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: 0; border-radius: 14px; padding: 14px 18px; font-size: 14px; font-weight: 700; font-family: system-ui, sans-serif; box-shadow: 0 8px 28px rgba(0,0,0,.2); cursor: pointer; transform: translateY(200%); transition: transform .35s cubic-bezier(.32,.72,0,1); }
-  #updateBanner.show { transform: translateY(0); }
-  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .modal-title { font-size: 20px; }
-  .icon-btn { background: none; border: none; cursor: pointer; color: var(--ink); font-size: 20px; }
-  .field-label { display: block; font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; margin: 12px 0 5px; }
-  .field { width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid #d8cfbe; background: #fffdf8; font-size: 16px; font-family: system-ui, sans-serif; color: var(--ink); }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .modal-title { font-size: 17px; font-weight: 600; }
+  .icon-btn { width: 30px; height: 30px; border-radius: 50%; background: var(--fill); border: none; cursor: pointer; color: var(--muted); font-size: 17px; line-height: 30px; }
+  .field-label { display: block; font-size: 13px; color: var(--muted); margin: 14px 4px 6px; }
+  .field { width: 100%; padding: 12px 14px; border-radius: 10px; border: 0; background: var(--card); font-size: 17px; color: var(--ink); }
   textarea.field { resize: vertical; line-height: 1.5; }
-  .result-note {
-    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(244,240,232,.18);
-    font-size: 13px; line-height: 1.6; font-family: system-ui, sans-serif;
-    opacity: .8; white-space: pre-wrap; word-break: break-word;
-  }
-  .note-mark { color: var(--gold); margin-right: 6px; }
-  .save-btn { width: 100%; margin-top: 20px; padding: 14px; border-radius: 12px; border: none; background: var(--accent); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; font-family: system-ui, sans-serif; }
-  .delete-btn { width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: none; background: transparent; color: #a13; font-size: 14px; cursor: pointer; font-family: system-ui, sans-serif; }
+  .save-btn { width: 100%; margin-top: 20px; padding: 14px; border-radius: 12px; border: none; background: var(--accent); color: #fff; font-size: 17px; font-weight: 600; cursor: pointer; }
+  .save-btn:active { opacity: .7; }
+  .delete-btn { width: 100%; margin-top: 8px; padding: 12px; border-radius: 12px; border: none; background: var(--card); color: #FF3B30; font-size: 17px; cursor: pointer; }
+  #updateBanner { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--ink); color: #fff; border: 0; border-radius: 14px; padding: 14px 18px; font-size: 15px; font-weight: 600; box-shadow: 0 8px 28px rgba(0,0,0,.25); cursor: pointer; transform: translateY(200%); transition: transform .35s cubic-bezier(.32,.72,0,1); }
+  #updateBanner.show { transform: translateY(0); }
 
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
 </style>
 </head>
 <body>
@@ -201,24 +148,24 @@
         <svg width="34" height="34" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
         <div class="kicker">WHAT TIME TO LEAVE</div>
       </div>
-      <h1>出発時刻、逆算します</h1>
-      <p class="sub">着きたい時間を選ぶと、何時に出ればいいか教えます。</p>
+      <h1>出発時刻</h1>
+      <p class="sub">着きたい時刻から、家を出る時刻を逆算します</p>
     </header>
 
     <div class="chips-head">
       <span class="chips-title" id="chipsTitle">行き先</span>
-      <button class="edit-toggle" id="editToggle">設定変更</button>
+      <button class="edit-toggle" id="editToggle">編集</button>
     </div>
     <div class="chips" id="chips"></div>
 
     <div class="compare-grid" id="compareGrid">
       <div class="compare-col compare-col1">
         <div class="card">
-          <div class="label">📍 行き先</div>
+          <div class="label">行き先</div>
           <select class="dest-select" id="dest1"></select>
         </div>
         <div class="card">
-          <div class="label">⏱ 着きたい時刻</div>
+          <div class="label">着きたい時刻</div>
           <div class="time-select">
             <select id="arriveH"></select>
             <span class="colon">:</span>
@@ -230,11 +177,11 @@
 
       <div class="compare-col compare-col2">
         <div class="card">
-          <div class="label">📍 行き先</div>
+          <div class="label">行き先</div>
           <select class="dest-select" id="dest2"></select>
         </div>
         <div class="card">
-          <div class="label">⏱ 着きたい時刻</div>
+          <div class="label">着きたい時刻</div>
           <div class="time-select">
             <select id="arrive2H"></select>
             <span class="colon">:</span>
@@ -247,7 +194,7 @@
 
     <div class="fav-sec" id="favSec">
       <div class="fav-head">
-        <span class="fav-title">★ お気に入り</span>
+        <span class="fav-title">お気に入り</span>
       </div>
       <div class="fav-list" id="favList"></div>
     </div>
@@ -271,7 +218,7 @@
     </div>
 
     <footer>
-      <svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
+      <svg width="14" height="14" viewBox="0 0 64 64" style="display:none"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
       <span id="versionText"></span>
     </footer>
   </div>
@@ -289,7 +236,7 @@
       <label class="field-label">メモ（任意）</label>
       <textarea class="field" id="fNote" rows="3" autocomplete="off" placeholder="東口から徒歩5分、土曜は混む など"></textarea>
       <button class="save-btn" id="saveBtn">保存</button>
-      <button class="delete-btn" id="deleteBtn" style="display:none">🗑 削除</button>
+      <button class="delete-btn" id="deleteBtn" style="display:none">この行き先を削除</button>
     </div>
   </div>
 
@@ -300,7 +247,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 20;
-  const APP_VERSION = "3.0.0";
+  const APP_VERSION = "3.1.0";
   const VERSION = APP_VERSION;
   document.getElementById("versionText").textContent = "出発時刻 逆算アプリ — v" + VERSION;
 
@@ -511,7 +458,7 @@
     if (!cur) { area.innerHTML = '<div class="empty">行き先を選んでください。</div>'; return; }
     const leave = calc(arriveStr, cur.travel);
     const noteHtml = (cur.note && cur.note.trim())
-      ? '<div class="result-note"><span class="note-mark">✎</span>' + escapeHtml(cur.note) + '</div>'
+      ? '<div class="result-note"><span class="note-mark">メモ</span>' + escapeHtml(cur.note) + '</div>'
       : '';
     area.innerHTML =
       '<div class="result">' +
@@ -524,7 +471,7 @@
           '<span class="arrow">→</span>' +
           '<span class="flow-item">' + arriveStr + '<small>' + escapeHtml(cur.name) + '着</small></span>' +
         '</div>' +
-        '<button class="edit-link" data-edit-id="' + escapeHtml(cur.id) + '">✎ ' + escapeHtml(cur.name) + 'の設定を変更</button>' +
+        '<button class="edit-link" data-edit-id="' + escapeHtml(cur.id) + '">' + escapeHtml(cur.name) + 'の設定を変更 ›</button>' +
         noteHtml +
       '</div>';
     const btn = area.querySelector('.edit-link');
@@ -615,7 +562,7 @@
     $("dataSec").style.display = editMode ? "none" : "";
     $("favSec").style.display = editMode ? "none" : "";
     $("editToggle").classList.toggle("active", editMode);
-    $("editToggle").textContent = editMode ? "完了" : "設定変更";
+    $("editToggle").textContent = editMode ? "完了" : "編集";
     $("chipsTitle").textContent = editMode ? "行き先の設定" : "行き先 (" + places.length + "件)";
     if (!editMode) {
       refreshDestOptions("dest1", sel1);
