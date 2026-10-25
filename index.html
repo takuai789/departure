@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="出発時刻" />
+<meta name="theme-color" content="#f4f0e8" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-v1-192.png" />
+<title>出発時刻 逆算アプリ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%231c1a17'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='20'%20fill='none'%20stroke='%23f0a868'%20stroke-width='3'/%3E%3Cline%20x1='32'%20y1='32'%20x2='32'%20y2='18'%20stroke='%23f0a868'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Cline%20x1='32'%20y1='32'%20x2='43'%20y2='38'%20stroke='%23c8553d'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='3'%20fill='%23f0a868'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --ink: #1c1a17;
+    --paper: #f4f0e8;
+    --accent: #c8553d;
+    --gold: #f0a868;
+    --muted: #6b6358;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #fbf8f1, var(--paper));
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--ink);
+    padding: calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 60px);
+  }
+  .shell { max-width: 460px; margin: 0 auto; }
+  .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .kicker { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.1; letter-spacing: -0.5px; }
+  .sub { font-size: 14px; color: var(--muted); font-family: system-ui, sans-serif; }
+  header { margin-bottom: 26px; }
+
+  .chips-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .chips-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
+  .edit-toggle {
+    background: transparent; border: 1px solid #d8cfbe; border-radius: 999px;
+    padding: 4px 14px; font-size: 13px; color: var(--muted); cursor: pointer;
+    font-family: system-ui, sans-serif;
+  }
+  .edit-toggle.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* chip列 (整理モード時のみ表示) */
+  .chips { display: none; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  .chips.editing { display: flex; }
+  .row {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 12px;
+    padding: 8px 10px; font-family: system-ui, sans-serif;
+  }
+  .row .row-name { flex: 1; font-size: 15px; }
+  .row .row-meta { font-size: 12px; color: var(--muted); }
+  .move-btn, .del-btn {
+    border: none; background: transparent; cursor: pointer; font-size: 17px;
+    width: 34px; height: 34px; border-radius: 8px; line-height: 1;
+  }
+  .move-btn { color: var(--ink); }
+  .move-btn:hover { background: #efe9dc; }
+  .move-btn:disabled { opacity: .25; cursor: default; }
+  .del-btn { color: #a13; }
+  .del-btn:hover { background: #f6e3df; }
+  .add-btn-full {
+    display: block; width: 100%; margin-top: 4px;
+    padding: 10px; border-radius: 12px;
+    border: 1.5px dashed var(--accent); background: transparent; color: var(--accent);
+    cursor: pointer; font-size: 14px; font-family: system-ui, sans-serif;
+  }
+
+  /* 比較グリッド: 狭い時1列、広い時2列 */
+  .compare-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+  .compare-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .compare-col2 { display: none; }
+  .dest-select {
+    width: 100%; padding: 10px 12px; font-size: 16px;
+    font-family: system-ui, sans-serif; border: 1px solid #d8cfbe;
+    border-radius: 10px; background: #fffdf8; color: var(--ink);
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%236b6358' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+  }
+  .dest-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  @media (min-width: 820px) {
+    .shell { max-width: 900px; }
+    .compare-grid { grid-template-columns: 1fr 1fr; }
+    .compare-col2 { display: flex; }
+  }
+
+  .card {
+    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 16px;
+    padding: 18px;
+  }
+
+  /* お気に入り */
+  .fav-sec { margin-top: 30px; }
+  .fav-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .fav-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
+  .fav-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fav-item {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    background: #fff8ec; border: 1.5px solid var(--gold); border-radius: 12px;
+    padding: 9px 14px; cursor: pointer; font-family: system-ui, sans-serif;
+    transition: transform .12s ease, border-color .15s ease;
+  }
+  .fav-item:hover { transform: translateY(-1px); border-color: var(--accent); }
+
+  /* 履歴 */
+  .history-sec { margin-top: 34px; }
+  .history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .history-title { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; }
+  .clear-btn {
+    background: transparent; border: 1px solid #d8cfbe; border-radius: 999px;
+    padding: 4px 14px; font-size: 12px; color: var(--muted); cursor: pointer;
+    font-family: system-ui, sans-serif;
+  }
+  .clear-btn:hover { background: #efe9dc; }
+  .history-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hist-item {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    background: #fffdf8; border: 1px solid #e0d8c8; border-radius: 12px;
+    padding: 9px 14px; cursor: pointer; font-family: system-ui, sans-serif;
+    transition: transform .12s ease, border-color .15s ease;
+  }
+  .hist-item:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .hist-name { font-size: 14px; }
+  .hist-times { font-size: 12px; color: var(--muted); font-family: 'Courier New', monospace; }
+  .hist-leave { color: var(--accent); font-weight: 700; }
+  .star-btn {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 15px; line-height: 1; padding: 2px 4px; margin-left: 2px;
+    border-radius: 6px; opacity: .35; transition: opacity .15s ease, transform .12s ease;
+  }
+  .star-btn:hover { opacity: 1; transform: scale(1.15); }
+  .star-btn.on { opacity: 1; }
+  .history-empty { font-size: 13px; color: var(--muted); font-family: system-ui, sans-serif; padding: 4px 0; }
+  .label {
+    display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted);
+    font-family: system-ui, sans-serif; margin-bottom: 10px;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .time-select { display: flex; align-items: center; gap: 6px; }
+  .time-select select {
+    font-size: 30px; font-family: 'Courier New', monospace; font-weight: 700;
+    color: var(--ink); background: transparent; border: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none; padding: 2px 4px;
+  }
+  .time-select select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .time-select .colon { font-size: 30px; font-family: 'Courier New', monospace; font-weight: 700; }
+
+  .result {
+    background: var(--ink); color: var(--paper); border-radius: 20px; padding: 26px 22px;
+    animation: rise .35s ease;
+  }
+  .result-label { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 2px; opacity: .6; }
+  .big-time { font-size: 64px; font-weight: 700; line-height: 1; margin: 4px 0 18px; font-family: 'Courier New', monospace; color: var(--gold); }
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; font-family: system-ui, sans-serif; opacity: .85; }
+  .flow-item { display: flex; flex-direction: column; line-height: 1.3; }
+  .flow-item small { opacity: .7; }
+  .arrow { opacity: .4; }
+  .edit-link { margin-top: 20px; display: inline-flex; align-items: center; gap: 5px; background: none; border: none; color: var(--gold); font-size: 13px; cursor: pointer; font-family: system-ui, sans-serif; }
+
+  .empty { padding: 30px; text-align: center; color: var(--muted); font-family: system-ui, sans-serif; }
+
+  footer { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 34px; font-size: 12px; color: #8a8175; font-family: 'Courier New', monospace; letter-spacing: .5px; }
+
+  .overlay { position: fixed; left: 0; right: 0; top: 0; bottom: var(--kb, 0px); background: rgba(28,26,23,.4); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--paper); width: 100%; max-width: 460px; border-radius: 20px 20px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom) + 24px); animation: rise .25s ease; max-height: calc(var(--app-height, 100vh) - env(safe-area-inset-top) - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  body.keyboard-open .modal { padding-bottom: 16px; }
+  .data-sec { margin-top: 34px; }
+  .data-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .data-note { font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; margin-top: 6px; }
+  #updateBanner { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: 0; border-radius: 14px; padding: 14px 18px; font-size: 14px; font-weight: 700; font-family: system-ui, sans-serif; box-shadow: 0 8px 28px rgba(0,0,0,.2); cursor: pointer; transform: translateY(200%); transition: transform .35s cubic-bezier(.32,.72,0,1); }
+  #updateBanner.show { transform: translateY(0); }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-size: 20px; }
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--ink); font-size: 20px; }
+  .field-label { display: block; font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; margin: 12px 0 5px; }
+  .field { width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid #d8cfbe; background: #fffdf8; font-size: 16px; font-family: system-ui, sans-serif; color: var(--ink); }
+  textarea.field { resize: vertical; line-height: 1.5; }
+  .result-note {
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(244,240,232,.18);
+    font-size: 13px; line-height: 1.6; font-family: system-ui, sans-serif;
+    opacity: .8; white-space: pre-wrap; word-break: break-word;
+  }
+  .note-mark { color: var(--gold); margin-right: 6px; }
+  .save-btn { width: 100%; margin-top: 20px; padding: 14px; border-radius: 12px; border: none; background: var(--accent); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; font-family: system-ui, sans-serif; }
+  .delete-btn { width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: none; background: transparent; color: #a13; font-size: 14px; cursor: pointer; font-family: system-ui, sans-serif; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand-row">
+        <svg width="34" height="34" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
+        <div class="kicker">WHAT TIME TO LEAVE</div>
+      </div>
+      <h1>出発時刻、逆算します</h1>
+      <p class="sub">着きたい時間を選ぶと、何時に出ればいいか教えます。</p>
+    </header>
+
+    <div class="chips-head">
+      <span class="chips-title" id="chipsTitle">行き先</span>
+      <button class="edit-toggle" id="editToggle">設定変更</button>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div class="compare-grid" id="compareGrid">
+      <div class="compare-col compare-col1">
+        <div class="card">
+          <div class="label">📍 行き先</div>
+          <select class="dest-select" id="dest1"></select>
+        </div>
+        <div class="card">
+          <div class="label">⏱ 着きたい時刻</div>
+          <div class="time-select">
+            <select id="arriveH"></select>
+            <span class="colon">:</span>
+            <select id="arriveM"></select>
+          </div>
+        </div>
+        <div id="resultArea"></div>
+      </div>
+
+      <div class="compare-col compare-col2">
+        <div class="card">
+          <div class="label">📍 行き先</div>
+          <select class="dest-select" id="dest2"></select>
+        </div>
+        <div class="card">
+          <div class="label">⏱ 着きたい時刻</div>
+          <div class="time-select">
+            <select id="arrive2H"></select>
+            <span class="colon">:</span>
+            <select id="arrive2M"></select>
+          </div>
+        </div>
+        <div id="resultArea2"></div>
+      </div>
+    </div>
+
+    <div class="fav-sec" id="favSec">
+      <div class="fav-head">
+        <span class="fav-title">★ お気に入り</span>
+      </div>
+      <div class="fav-list" id="favList"></div>
+    </div>
+
+    <div class="history-sec" id="historySec">
+      <div class="history-head">
+        <span class="history-title">最近調べたもの</span>
+        <button class="clear-btn" id="clearHistBtn">履歴を消す</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <div class="data-sec" id="dataSec">
+      <div class="history-head"><span class="history-title">データ</span></div>
+      <div class="data-row">
+        <button class="clear-btn" id="exportBtn">書き出す（バックアップ）</button>
+        <button class="clear-btn" id="importBtn">取り込む</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
+      </div>
+      <div class="data-note" id="bkNote"></div>
+    </div>
+
+    <footer>
+      <svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
+      <span id="versionText"></span>
+    </footer>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title" id="modalTitle">行き先を追加</h2>
+        <button class="icon-btn" id="closeBtn">×</button>
+      </div>
+      <label class="field-label">名前</label>
+      <input class="field" id="fPlace" placeholder="ジム、会社など" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <label class="field-label">移動時間（分）</label>
+      <input class="field" id="fTravel" type="number" inputmode="numeric" autocomplete="off" />
+      <label class="field-label">メモ（任意）</label>
+      <textarea class="field" id="fNote" rows="3" autocomplete="off" placeholder="東口から徒歩5分、土曜は混む など"></textarea>
+      <button class="save-btn" id="saveBtn">保存</button>
+      <button class="delete-btn" id="deleteBtn" style="display:none">🗑 削除</button>
+    </div>
+  </div>
+
+<script>
+  const KEY = "departure_places_v2";
+  const KEY_Q1 = "departure_query1_v1";
+  const KEY_Q2 = "departure_query2_v1";
+  const KEY_HIST = "departure_history_v1";
+  const KEY_FAV = "departure_favorites_v1";
+  const HIST_MAX = 20;
+  const APP_VERSION = "3.0.0";
+  const VERSION = APP_VERSION;
+  document.getElementById("versionText").textContent = "出発時刻 逆算アプリ — v" + VERSION;
+
+  const DEFAULTS = [
+    { id: "1", name: "ジム", travel: 25 },
+    { id: "2", name: "会社", travel: 40 },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+
+  function loadPlaces() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : DEFAULTS.slice();
+    } catch { return DEFAULTS.slice(); }
+  }
+  function savePlaces() { localStorage.setItem(KEY, JSON.stringify(places)); }
+  function loadQuery(k) {
+    try {
+      const raw = localStorage.getItem(k);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  function saveQ1() {
+    localStorage.setItem(KEY_Q1, JSON.stringify({ destId: sel1, h: $("arriveH").value, m: $("arriveM").value }));
+  }
+  function saveQ2() {
+    localStorage.setItem(KEY_Q2, JSON.stringify({ destId: sel2, h: $("arrive2H").value, m: $("arrive2M").value }));
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(KEY_HIST);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  function saveHistory() { localStorage.setItem(KEY_HIST, JSON.stringify(history)); }
+
+  function loadFavorites() {
+    try {
+      const raw = localStorage.getItem(KEY_FAV);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  function saveFavorites() { localStorage.setItem(KEY_FAV, JSON.stringify(favorites)); }
+
+  let favorites = loadFavorites();
+
+  function isFav(destId, arrive) {
+    return favorites.some(f => f.destId === destId && f.arrive === arrive);
+  }
+  function toggleFav(destId, arrive) {
+    if (isFav(destId, arrive)) {
+      favorites = favorites.filter(f => !(f.destId === destId && f.arrive === arrive));
+    } else {
+      favorites.unshift({ destId: destId, arrive: arrive });
+    }
+    saveFavorites();
+    renderFavorites();
+    renderHistory();
+  }
+
+  let history = loadHistory();
+  const histTimers = { 1: null, 2: null };
+
+  // 手を止めて結果を見ている状態になってから記録する。
+  // 操作を続けている間はタイマーがリセットされ、通過点は残らない。
+  const HIST_DELAY = 6000;
+  function recordLater(panel, destId, arriveStr) {
+    clearTimeout(histTimers[panel]);
+    histTimers[panel] = setTimeout(() => record(destId, arriveStr), HIST_DELAY);
+  }
+  function record(destId, arriveStr) {
+    const p = places.find(x => x.id === destId);
+    if (!p) return;
+    // 同じ組み合わせは重複させず、最新として先頭へ
+    history = history.filter(h => !(h.destId === destId && h.arrive === arriveStr));
+    history.unshift({ destId: destId, arrive: arriveStr, at: Date.now() });
+    if (history.length > HIST_MAX) history = history.slice(0, HIST_MAX);
+    saveHistory();
+    renderHistory();
+  }
+
+  let places = loadPlaces();
+  const q1saved = loadQuery(KEY_Q1);
+  const q2saved = loadQuery(KEY_Q2);
+  let sel1 = (q1saved && places.some(p => p.id === q1saved.destId)) ? q1saved.destId
+           : (places[0] ? places[0].id : null);
+  let sel2 = (q2saved && places.some(p => p.id === q2saved.destId)) ? q2saved.destId
+           : (places[1] ? places[1].id : (places[0] ? places[0].id : null));
+  let editingId = null;
+  let editMode = false;
+
+  function getArrive1() { return $("arriveH").value + ":" + $("arriveM").value; }
+  function getArrive2() { return $("arrive2H").value + ":" + $("arrive2M").value; }
+
+  function fillHMOptions(hSel, mSel) {
+    for (let h = 0; h < 24; h++) {
+      const o = document.createElement("option");
+      o.value = String(h).padStart(2, "0"); o.textContent = String(h).padStart(2, "0");
+      hSel.appendChild(o);
+    }
+    for (let m = 0; m < 60; m += 10) {
+      const o = document.createElement("option");
+      o.value = String(m).padStart(2, "0"); o.textContent = String(m).padStart(2, "0");
+      mSel.appendChild(o);
+    }
+  }
+
+  function initPanel1() {
+    fillHMOptions($("arriveH"), $("arriveM"));
+    $("arriveH").value = (q1saved && q1saved.h) ? q1saved.h : "10";
+    $("arriveM").value = (q1saved && q1saved.m) ? q1saved.m : "00";
+    const onChange1 = () => { renderResult1(); saveQ1(); recordLater(1, sel1, getArrive1()); };
+    $("arriveH").addEventListener("change", onChange1);
+    $("arriveM").addEventListener("change", onChange1);
+    $("dest1").addEventListener("change", () => { sel1 = $("dest1").value; onChange1(); });
+  }
+  function initPanel2() {
+    fillHMOptions($("arrive2H"), $("arrive2M"));
+    $("arrive2H").value = (q2saved && q2saved.h) ? q2saved.h : "10";
+    $("arrive2M").value = (q2saved && q2saved.m) ? q2saved.m : "00";
+    const onChange2 = () => { renderResult2(); saveQ2(); recordLater(2, sel2, getArrive2()); };
+    $("arrive2H").addEventListener("change", onChange2);
+    $("arrive2M").addEventListener("change", onChange2);
+    $("dest2").addEventListener("change", () => { sel2 = $("dest2").value; onChange2(); });
+  }
+
+  function refreshDestOptions(selectId, currentSel) {
+    const s = $(selectId);
+    s.innerHTML = "";
+    places.forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.id; o.textContent = p.name;
+      s.appendChild(o);
+    });
+    if (currentSel && places.some(p => p.id === currentSel)) {
+      s.value = currentSel;
+    }
+  }
+
+  function calc(arriveStr, travel) {
+    const [h, m] = arriveStr.split(":").map(Number);
+    const a = new Date(); a.setHours(h, m, 0, 0);
+    return new Date(a.getTime() - travel * 60000);
+  }
+  function fmt(d) {
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function renderChips() {
+    const c = $("chips");
+    c.innerHTML = "";
+    c.className = "chips" + (editMode ? " editing" : "");
+    if (!editMode) return;
+
+    places.forEach((p, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      const up = document.createElement("button");
+      up.className = "move-btn"; up.textContent = "↑";
+      up.title = "上へ"; up.disabled = i === 0;
+      up.onclick = () => moveItem(i, -1);
+      const down = document.createElement("button");
+      down.className = "move-btn"; down.textContent = "↓";
+      down.title = "下へ"; down.disabled = i === places.length - 1;
+      down.onclick = () => moveItem(i, 1);
+      const name = document.createElement("span");
+      name.className = "row-name"; name.textContent = p.name;
+      const meta = document.createElement("span");
+      meta.className = "row-meta";
+      meta.textContent = "移動 " + p.travel + "分" + (p.note && p.note.trim() ? " ✎" : "");
+      const del = document.createElement("button");
+      del.className = "del-btn"; del.textContent = "✕";
+      del.title = "削除";
+      del.onclick = () => removeItem(p.id);
+      row.appendChild(up); row.appendChild(down);
+      row.appendChild(name); row.appendChild(meta); row.appendChild(del);
+      c.appendChild(row);
+    });
+
+    const add = document.createElement("button");
+    add.className = "add-btn-full";
+    add.textContent = "＋ 行き先を追加";
+    add.onclick = () => openEditor("new");
+    c.appendChild(add);
+  }
+
+  function moveItem(index, dir) {
+    const j = index + dir;
+    if (j < 0 || j >= places.length) return;
+    const tmp = places[index]; places[index] = places[j]; places[j] = tmp;
+    renderAll();
+  }
+  async function removeItem(id) {
+    const p = places.find((x) => x.id === id);
+    if (!p) return;
+    if (!(await uiAsk("「" + p.name + "」を削除しますか？", "削除する"))) return;
+    places = places.filter((x) => x.id !== id);
+    favorites = favorites.filter(f => f.destId !== id);
+    saveFavorites();
+    if (sel1 === id) sel1 = places[0] ? places[0].id : null;
+    if (sel2 === id) sel2 = places[0] ? places[0].id : null;
+    renderAll();
+  }
+
+  function renderResultInto(area, cur, arriveStr) {
+    if (!cur) { area.innerHTML = '<div class="empty">行き先を選んでください。</div>'; return; }
+    const leave = calc(arriveStr, cur.travel);
+    const noteHtml = (cur.note && cur.note.trim())
+      ? '<div class="result-note"><span class="note-mark">✎</span>' + escapeHtml(cur.note) + '</div>'
+      : '';
+    area.innerHTML =
+      '<div class="result">' +
+        '<div class="result-label">家を出る時刻</div>' +
+        '<div class="big-time">' + fmt(leave) + '</div>' +
+        '<div class="flow">' +
+          '<span class="flow-item">' + fmt(leave) + '<small>出発</small></span>' +
+          '<span class="arrow">→</span>' +
+          '<span class="flow-item">移動 ' + cur.travel + '分</span>' +
+          '<span class="arrow">→</span>' +
+          '<span class="flow-item">' + arriveStr + '<small>' + escapeHtml(cur.name) + '着</small></span>' +
+        '</div>' +
+        '<button class="edit-link" data-edit-id="' + escapeHtml(cur.id) + '">✎ ' + escapeHtml(cur.name) + 'の設定を変更</button>' +
+        noteHtml +
+      '</div>';
+    const btn = area.querySelector('.edit-link');
+    if (btn) btn.onclick = () => openEditor(cur.id);
+  }
+
+  function renderResult1() {
+    renderResultInto($("resultArea"), places.find(p => p.id === sel1), getArrive1());
+  }
+  function renderResult2() {
+    renderResultInto($("resultArea2"), places.find(p => p.id === sel2), getArrive2());
+  }
+
+  function buildEntry(h, className) {
+    const p = places.find(x => x.id === h.destId);
+    const leave = fmt(calc(h.arrive, p.travel));
+    const wrap = document.createElement("div");
+    wrap.className = className;
+
+    const body = document.createElement("span");
+    body.style.cssText = "display:inline-flex;align-items:baseline;gap:8px;cursor:pointer";
+    body.innerHTML =
+      '<span class="hist-name">' + escapeHtml(p.name) + '</span>' +
+      '<span class="hist-times"><span class="hist-leave">' + leave + '</span> → ' + h.arrive + '着</span>';
+    body.title = "クリックで左側に呼び出す";
+    body.onclick = () => applyHistory(h);
+
+    const star = document.createElement("button");
+    const on = isFav(h.destId, h.arrive);
+    star.className = "star-btn" + (on ? " on" : "");
+    star.textContent = on ? "★" : "☆";
+    star.title = on ? "お気に入りから外す" : "お気に入りに追加";
+    star.onclick = (e) => { e.stopPropagation(); toggleFav(h.destId, h.arrive); };
+
+    wrap.appendChild(body);
+    wrap.appendChild(star);
+    return wrap;
+  }
+
+  function renderFavorites() {
+    const list = $("favList");
+    list.innerHTML = "";
+    const valid = favorites.filter(f => places.some(p => p.id === f.destId));
+    if (!valid.length) {
+      list.innerHTML = '<div class="history-empty">履歴の☆を押すと、ここに固定できます。</div>';
+      return;
+    }
+    valid.forEach(f => list.appendChild(buildEntry(f, "fav-item")));
+  }
+
+  function renderHistory() {
+    const list = $("historyList");
+    list.innerHTML = "";
+    // 削除済みの行き先を参照する履歴は除外して表示
+    const valid = history.filter(h => places.some(p => p.id === h.destId));
+    if (!valid.length) {
+      list.innerHTML = '<div class="history-empty">まだありません。行き先と時刻を選ぶと、ここに残ります。</div>';
+      return;
+    }
+    valid.forEach(h => list.appendChild(buildEntry(h, "hist-item")));
+  }
+
+  function applyHistory(h) {
+    const [hh, mm] = h.arrive.split(":");
+    sel1 = h.destId;
+    $("arriveH").value = hh;
+    $("arriveM").value = mm;
+    refreshDestOptions("dest1", sel1);
+    renderResult1();
+    saveQ1();
+    // 呼び出したものを最新として繰り上げる
+    clearTimeout(histTimers[1]);
+    record(h.destId, h.arrive);
+  }
+
+  $("clearHistBtn").onclick = async () => {
+    if (!history.length) return;
+    if (!(await uiAsk("履歴をすべて消しますか？", "消す"))) return;
+    history = [];
+    saveHistory();
+    renderHistory();
+  };
+
+  function renderAll() {
+    renderChips();
+    $("compareGrid").style.display = editMode ? "none" : "";
+    $("historySec").style.display = editMode ? "none" : "";
+    $("dataSec").style.display = editMode ? "none" : "";
+    $("favSec").style.display = editMode ? "none" : "";
+    $("editToggle").classList.toggle("active", editMode);
+    $("editToggle").textContent = editMode ? "完了" : "設定変更";
+    $("chipsTitle").textContent = editMode ? "行き先の設定" : "行き先 (" + places.length + "件)";
+    if (!editMode) {
+      refreshDestOptions("dest1", sel1);
+      refreshDestOptions("dest2", sel2);
+      renderResult1();
+      renderResult2();
+      renderHistory();
+      renderFavorites();
+    }
+    savePlaces();
+  }
+
+  $("editToggle").onclick = () => { editMode = !editMode; renderAll(); };
+
+  function openEditor(id) {
+    editingId = id;
+    const isNew = id === "new";
+    const p = isNew ? null : places.find((x) => x.id === id);
+    $("modalTitle").textContent = isNew ? "行き先を追加" : "行き先を編集";
+    $("fPlace").value = p ? p.name : "";
+    $("fTravel").value = p ? p.travel : 30;
+    $("fNote").value = (p && p.note) ? p.note : "";
+    $("deleteBtn").style.display = isNew ? "none" : "block";
+    $("overlay").classList.add("open");
+    setTimeout(() => $("fPlace").focus(), 50);
+  }
+  function closeEditor() { editingId = null; $("overlay").classList.remove("open"); }
+
+  $("saveBtn").onclick = () => {
+    const name = $("fPlace").value.trim();
+    if (!name) return;
+    const travel = Number($("fTravel").value) || 0;
+    const note = $("fNote").value.trim();
+    if (editingId === "new") {
+      const np = { id: String(Date.now()), name, travel, note };
+      places.push(np);
+      // 新規追加した行き先を右パネル側に自動セット (見やすいので)
+      sel2 = np.id;
+      saveQ2();
+    } else {
+      places = places.map((p) => p.id === editingId ? { ...p, name, travel, note } : p);
+    }
+    closeEditor(); renderAll();
+  };
+  $("deleteBtn").onclick = async () => {
+    const p0 = places.find((p) => p.id === editingId);
+    if (!(await uiAsk("「" + (p0 ? p0.name : "") + "」を削除しますか？", "削除する"))) return;
+    places = places.filter((p) => p.id !== editingId);
+    if (sel1 === editingId) sel1 = places[0] ? places[0].id : null;
+    if (sel2 === editingId) sel2 = places[0] ? places[0].id : null;
+    closeEditor(); renderAll();
+  };
+  $("closeBtn").onclick = closeEditor;
+  $("overlay").onclick = (e) => { if (e.target.id === "overlay") closeEditor(); };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------- バックアップ（全アプリ共通の作法） ----------
+  const BK_KEY = "departure_lastBackupAt", SCHEMA = "departure.v1";
+  const pad2 = (n) => String(n).padStart(2, "0");
+  function bkName() { const d = new Date(); return "出発時刻_" + d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + ".json"; }
+  function bkAskSaved() {
+    return new Promise((resolve) => {
+      const bg = document.createElement("div");
+      bg.style.cssText = "position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif";
+      bg.innerHTML = '<div style="width:100%;max-width:330px;background:#fff;color:#1c1c1e;border-radius:18px;padding:20px 20px 12px;box-shadow:0 12px 40px rgba(0,0,0,.2)"><div style="font-size:16px;font-weight:700;margin-bottom:6px">バックアップは保存できましたか？</div><div style="font-size:14px;line-height:1.6;color:#6e6e73">保存できていれば、前回のバックアップ日を更新します。</div><div style="display:flex;justify-content:flex-end;gap:4px;margin-top:12px"><button data-v="0" style="border:0;background:none;font:inherit;font-size:15px;padding:10px 12px;color:#6e6e73">やめた</button><button data-v="1" style="border:0;background:none;font:inherit;font-size:15px;font-weight:700;padding:10px 12px;color:#007aff">保存できた</button></div></div>';
+      bg.addEventListener("click", (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; bg.remove(); resolve(b.dataset.v === "1"); });
+      document.body.appendChild(bg);
+    });
+  }
+  async function bkSave(text) {
+    const name = bkName();
+    if (navigator.maxTouchPoints > 0) {
+      try {
+        const file = new File([text], name, { type: "application/json" });
+        if (navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return "ok"; }
+      } catch (e) { if (e && e.name === "AbortError") return (await bkAskSaved()) ? "ok" : "cancel"; }
+    }
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500);
+    return "ok";
+  }
+  function bkText() { let t = 0; try { t = Number(localStorage.getItem(BK_KEY) || 0); } catch (e) {} if (!t) return "まだ一度もバックアップしていません。データはこの端末の中だけにあります。"; const d = Math.floor((Date.now() - t) / 86400000); return (d === 0 ? "前回のバックアップ：今日" : "前回のバックアップから " + d + "日") + "。データはこの端末の中だけにあります。"; }
+  function renderBk() { $("bkNote").textContent = bkText(); }
+  $("exportBtn").onclick = async () => {
+    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places, history, favorites, q1: loadQuery(KEY_Q1), q2: loadQuery(KEY_Q2) };
+    if (await bkSave(JSON.stringify(data, null, 2)) !== "ok") return;
+    try { localStorage.setItem(BK_KEY, String(Date.now())); } catch (e) {}
+    renderBk(); uiToast("書き出しました");
+  };
+  $("importBtn").onclick = () => $("importFile").click();
+  $("importFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("出発時刻のデータではないようです"); return; }
+      if (!(await uiAsk("いまの行き先・履歴・お気に入りを、このファイルの内容に置き換えますか？", "置き換える"))) return;
+      places = data.places; history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
+      saveHistory(); saveFavorites();
+      if (data.q1) localStorage.setItem(KEY_Q1, JSON.stringify(data.q1));
+      if (data.q2) localStorage.setItem(KEY_Q2, JSON.stringify(data.q2));
+      sel1 = data.q1 && places.some(p => p.id === data.q1.destId) ? data.q1.destId : (places[0] ? places[0].id : null);
+      sel2 = data.q2 && places.some(p => p.id === data.q2.destId) ? data.q2.destId : (places[1] ? places[1].id : sel1);
+      renderAll(); uiToast("取り込みました（行き先 " + places.length + "件）");
+    } catch (err) { uiToast("取り込めませんでした"); }
+  });
+
+  initPanel1();
+  initPanel2();
+  renderAll();
+  renderBk();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+  // ---------- Service Worker + 自動アップデート ----------
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("sw.js");
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+        reg.addEventListener("updatefound", () => { const sw = reg.installing; if (!sw) return; sw.addEventListener("statechange", () => { if (sw.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner(sw); }); });
+        reg.update();
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update(); });
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => { if (refreshing) return; refreshing = true; location.reload(); });
+      } catch (e) {}
+    });
+  }
+  function showUpdateBanner(waitingSW) {
+    if (document.getElementById("updateBanner")) return;
+    const b = document.createElement("button"); b.id = "updateBanner";
+    b.textContent = "新しいバージョンがあります — タップで更新";
+    b.onclick = () => { b.disabled = true; b.textContent = "更新中…"; waitingSW.postMessage("SKIP_WAITING"); };
+    document.body.appendChild(b); requestAnimationFrame(() => b.classList.add("show"));
+  }
+
+  // ---------- iPhoneの定石：キーボードの上にシートを出す ----------
+  (function () {
+    const vv = window.visualViewport; if (!vv) return;
+    const root = document.documentElement; let baseH = vv.height, lastH = -1, lastK = -1;
+    function apply() {
+      const h = Math.round(vv.height), k = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      if (h !== lastH) { root.style.setProperty("--app-height", h + "px"); lastH = h; }
+      if (k !== lastK) { root.style.setProperty("--kb", k + "px"); lastK = k; }
+      document.body.classList.toggle("keyboard-open", h < baseH - 120);
+    }
+    let until = 0, looping = false;
+    function follow(ms) {
+      until = Math.max(until, performance.now() + ms);
+      if (looping) return; looping = true;
+      const tick = () => { apply(); const a = document.activeElement; const typing = a && /^(INPUT|TEXTAREA)$/.test(a.tagName); if (typing || performance.now() < until) requestAnimationFrame(tick); else looping = false; };
+      requestAnimationFrame(tick);
+    }
+    vv.addEventListener("resize", () => follow(600)); vv.addEventListener("scroll", () => follow(600));
+    document.addEventListener("focusin", (e) => {
+      follow(1200);
+      const el = e.target;
+      if (el && el.closest && el.closest(".modal")) [350, 700].forEach((ms) => setTimeout(() => { if (document.activeElement === el) { try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (_) {} } }, ms));
+    });
+    document.addEventListener("focusout", () => follow(1200));
+    apply();
+  })();
+</script>
+<div id="ui-toast" style="position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translateX(-50%);background:rgba(28,28,30,.94);color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;z-index:9000;opacity:0;pointer-events:none;transition:opacity .25s;max-width:90vw;text-align:center;font-family:inherit"></div>
+<div id="ui-ask" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9001;padding:24px"><div style="background:#fff;color:#1c1c1e;border-radius:16px;padding:20px 18px 14px;max-width:330px;width:100%;font-family:inherit"><p id="ui-ask-msg" style="margin:0 0 16px;font-size:15px;line-height:1.7;white-space:pre-line;text-align:center"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" id="ui-ask-no" style="padding:11px;border-radius:10px;border:0;background:rgba(0,0,0,.07);color:inherit;font:inherit;font-size:15px;font-weight:700">やめる</button><button type="button" id="ui-ask-yes" style="padding:11px;border-radius:10px;border:0;background:#E5484D;color:#fff;font:inherit;font-size:15px;font-weight:700">OK</button></div></div></div>
+<script>
+  // 自前のお知らせ・確認（iPhoneのホーム画面アプリでは alert/confirm が出ないことがあるため）
+  let _uiT = 0;
+  function uiToast(msg){ const t=document.getElementById('ui-toast'); t.textContent=msg; t.style.opacity='1'; clearTimeout(_uiT); _uiT=setTimeout(()=>{t.style.opacity='0';}, 2400); }
+  function uiAsk(msg, yes){ return new Promise(res=>{ const bg=document.getElementById('ui-ask'); document.getElementById('ui-ask-msg').textContent=msg; const y=document.getElementById('ui-ask-yes'), n=document.getElementById('ui-ask-no'); y.textContent=yes||'OK'; bg.style.display='flex'; const done=v=>{ bg.style.display='none'; y.onclick=n.onclick=null; res(v); }; y.onclick=()=>done(true); n.onclick=()=>done(false); }); }
+</script>
+</body>
+</html>
