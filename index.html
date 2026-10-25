@@ -266,7 +266,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.7.0";
+  const APP_VERSION = "3.8.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -321,9 +321,9 @@
     const el = $("panel" + n), q = panels[n];
     const chips = places.map((p) => '<button class="pchip' + (p.id === q.destId ? ' on' : '') + '" data-pick="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</button>').join('') + '<button class="pchip add" data-addplace="1">＋</button>';
     el.innerHTML = '<div class="panel-tag">' + (n === 1 ? 'いつもの' : '比べる') + '</div>' +
-      '<div class="card"><div class="label"><span class="stepno">1</span>行き先を選ぶ</div><div class="place-chips">' + chips + '</div>' +
+      '<div class="card"><div class="label"><span class="stepno">1</span>どこ？</div><div class="place-chips">' + chips + '</div>' +
         (n === 1 ? '<div class="chip-hint">' + (matchMedia("(pointer: coarse)").matches ? '長押し' : '右クリック') + 'で行き先の設定を変更</div>' : '') + '</div>' +
-      '<div class="card"><div class="label"><span class="stepno">2</span>着きたい時刻に合わせる</div>' +
+      '<div class="card"><div class="label"><span class="stepno">2</span>いつ着きたい？</div>' +
         '<div class="time-row"><button class="step-btn" data-step="-10">−10</button>' +
         '<div class="time-select"><select data-h>' + hourOpts(q.h) + '</select><span class="colon">:</span><select data-m>' + minOpts(q.m) + '</select></div>' +
         '<button class="step-btn" data-step="10">＋10</button></div>' +
