@@ -66,6 +66,18 @@
     body.compare .compare-col2 { display: flex; }
     body.compare .panel-tag { display: block; }
   }
+  /* PCで1つだけのとき：左に入力、右に結果。下の一覧も左右に並べて、横幅を活かす */
+  @media (min-width: 900px) {
+    body:not(.compare) .shell { max-width: 980px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
+    body:not(.compare) .shell > * { grid-column: 1 / -1; }
+    body:not(.compare) .shell > #usualSec { grid-column: 1; }
+    body:not(.compare) .shell > #dataSec { grid-column: 2; margin-top: 26px; }
+    body:not(.compare) #panel1 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; align-items: start; }
+    body:not(.compare) #panel1 > .card { grid-column: 1; }
+    body:not(.compare) #panel1 > .res { grid-column: 2; grid-row: 1 / span 4; position: sticky; top: 16px; }
+    body:not(.compare) #panel1 .big-time { font-size: 84px; }
+    body:not(.compare) h1 { font-size: 40px; }
+  }
 
   /* 入力カード：行き先と時刻を1枚のグループに見せる */
   .card { background: var(--card); border-radius: 12px; padding: 12px 16px; }
@@ -241,7 +253,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.4.0";
+  const APP_VERSION = "3.5.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
