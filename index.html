@@ -56,10 +56,15 @@
   .compare-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
   .compare-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .compare-col2 { display: none; }
+  /* PCで「2つ並べて比べる」をオンにしたときだけ2列 */
+  .cmp-toggle { display: none; border: 0; background: none; color: var(--accent); font-size: 15px; font-weight: 500; padding: 4px 2px; cursor: pointer; margin-right: 14px; }
+  .panel-tag { display: none; font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 4px -4px; }
   @media (min-width: 820px) {
-    .shell { max-width: 900px; }
-    .compare-grid { grid-template-columns: 1fr 1fr; }
-    .compare-col2 { display: flex; }
+    .cmp-toggle { display: inline-block; }
+    body.compare .shell { max-width: 900px; }
+    body.compare .compare-grid { grid-template-columns: 1fr 1fr; }
+    body.compare .compare-col2 { display: flex; }
+    body.compare .panel-tag { display: block; }
   }
 
   /* 入力カード：行き先と時刻を1枚のグループに見せる */
@@ -177,7 +182,7 @@
 
     <div class="chips-head">
       <span class="chips-title" id="chipsTitle">行き先</span>
-      <button class="edit-toggle" id="editToggle">編集</button>
+      <span><button class="cmp-toggle" id="cmpToggle">2つ並べて比べる</button><button class="edit-toggle" id="editToggle">編集</button></span>
     </div>
     <div class="chips" id="chips"></div>
 
@@ -236,7 +241,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.3.0";
+  const APP_VERSION = "3.4.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -290,7 +295,7 @@
   function renderPanel(n) {
     const el = $("panel" + n), q = panels[n];
     const chips = places.map((p) => '<button class="pchip' + (p.id === q.destId ? ' on' : '') + '" data-pick="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</button>').join('') + '<button class="pchip add" data-addplace="1">＋</button>';
-    el.innerHTML =
+    el.innerHTML = '<div class="panel-tag">' + (n === 1 ? 'いつもの' : '比べる') + '</div>' +
       '<div class="card"><div class="label">行き先</div><div class="place-chips">' + chips + '</div>' +
         (n === 1 ? '<div class="chip-hint">長押しで行き先の設定を変更</div>' : '') + '</div>' +
       '<div class="card"><div class="label">着きたい時刻</div>' +
@@ -476,6 +481,12 @@
     if (!editMode) { renderPanel(1); renderPanel(2); renderUsual(); }
   }
   $("editToggle").onclick = () => { editMode = !editMode; renderAll(); };
+  // PCの2列表示はこの端末だけの設定（初期はオフ）
+  const CMP_KEY = "departure_compare_v1";
+  let compareOn = false; try { compareOn = localStorage.getItem(CMP_KEY) === "1"; } catch (e) {}
+  function applyCompare() { document.body.classList.toggle("compare", compareOn); $("cmpToggle").textContent = compareOn ? "比べるのをやめる" : "2つ並べて比べる"; if (compareOn) renderPanel(2); }
+  $("cmpToggle").onclick = () => { compareOn = !compareOn; try { localStorage.setItem(CMP_KEY, compareOn ? "1" : "0"); } catch (e) {} applyCompare(); };
+  applyCompare();
 
   // ---------- 行き先の編集シート ----------
   let editingFor = 1;
