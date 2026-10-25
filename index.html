@@ -139,15 +139,38 @@
 
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
+
+  /* v3.2 追加 */
+  .place-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 4px; margin: 0 -2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .place-chips::-webkit-scrollbar { display: none; }
+  .pchip { flex-shrink: 0; border: 0; border-radius: 999px; padding: 9px 16px; font-size: 16px; font-weight: 600; background: var(--fill); color: var(--ink); cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .pchip.on { background: var(--accent); color: #fff; }
+  .pchip.add { color: var(--accent); background: var(--accent-soft); }
+  .chip-hint { font-size: 12px; color: var(--tertiary); margin: 6px 2px 0; }
+  .time-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .step-btn { width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); font-size: 17px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .step-btn:active { opacity: .6; }
+  .time-select select { font-size: 34px; }
+  .buf-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: .5px solid var(--sep); }
+  .buf-row .label { margin: 0; }
+  .seg { display: inline-flex; background: var(--fill); border-radius: 9px; padding: 2px; }
+  .seg button { border: 0; background: none; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 7px; color: var(--ink); cursor: pointer; }
+  .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .day-tag { display: inline-block; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.22); border-radius: 6px; padding: 1px 7px; margin-left: 6px; vertical-align: 2px; }
+  .countdown { font-size: 17px; font-weight: 700; margin: -6px 0 12px; }
+  .countdown.late { background: #fff; color: #D12A20; display: inline-block; border-radius: 8px; padding: 3px 10px; }
+  .flow { gap: 8px; }
+  .flow-item.prep { opacity: .85; }
+  .wk-note { font-size: 12.5px; opacity: .85; margin-top: 8px; }
+  .row .grip { width: 30px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--tertiary); font-size: 18px; cursor: grab; touch-action: none; }
+  .row.dragging { box-shadow: 0 8px 20px rgba(0,0,0,.18); position: relative; z-index: 5; }
+  .row .row-name { cursor: pointer; }
+  .usual-count { font-size: 12px; color: var(--tertiary); margin-left: 6px; }
 </style>
 </head>
 <body>
   <div class="shell">
     <header>
-      <div class="brand-row">
-        <svg width="34" height="34" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
-        <div class="kicker">WHAT TIME TO LEAVE</div>
-      </div>
       <h1>出発時刻</h1>
       <p class="sub">着きたい時刻から、家を出る時刻を逆算します</p>
     </header>
@@ -159,52 +182,16 @@
     <div class="chips" id="chips"></div>
 
     <div class="compare-grid" id="compareGrid">
-      <div class="compare-col compare-col1">
-        <div class="card">
-          <div class="label">行き先</div>
-          <select class="dest-select" id="dest1"></select>
-        </div>
-        <div class="card">
-          <div class="label">着きたい時刻</div>
-          <div class="time-select">
-            <select id="arriveH"></select>
-            <span class="colon">:</span>
-            <select id="arriveM"></select>
-          </div>
-        </div>
-        <div id="resultArea"></div>
-      </div>
-
-      <div class="compare-col compare-col2">
-        <div class="card">
-          <div class="label">行き先</div>
-          <select class="dest-select" id="dest2"></select>
-        </div>
-        <div class="card">
-          <div class="label">着きたい時刻</div>
-          <div class="time-select">
-            <select id="arrive2H"></select>
-            <span class="colon">:</span>
-            <select id="arrive2M"></select>
-          </div>
-        </div>
-        <div id="resultArea2"></div>
-      </div>
+      <div class="compare-col" id="panel1"></div>
+      <div class="compare-col compare-col2" id="panel2"></div>
     </div>
 
-    <div class="fav-sec" id="favSec">
-      <div class="fav-head">
-        <span class="fav-title">お気に入り</span>
-      </div>
-      <div class="fav-list" id="favList"></div>
-    </div>
-
-    <div class="history-sec" id="historySec">
+    <div class="history-sec" id="usualSec">
       <div class="history-head">
-        <span class="history-title">最近調べたもの</span>
+        <span class="history-title">よく使う組み合わせ</span>
         <button class="clear-btn" id="clearHistBtn">履歴を消す</button>
       </div>
-      <div class="history-list" id="historyList"></div>
+      <div class="history-list" id="usualList"></div>
     </div>
 
     <div class="data-sec" id="dataSec">
@@ -217,10 +204,7 @@
       <div class="data-note" id="bkNote"></div>
     </div>
 
-    <footer>
-      <svg width="14" height="14" viewBox="0 0 64 64" style="display:none"><rect width="64" height="64" rx="14" fill="#1c1a17"/><circle cx="32" cy="32" r="20" fill="none" stroke="#f0a868" stroke-width="3"/><line x1="32" y1="32" x2="32" y2="18" stroke="#f0a868" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="32" x2="43" y2="38" stroke="#c8553d" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#f0a868"/></svg>
-      <span id="versionText"></span>
-    </footer>
+    <footer><span id="versionText"></span></footer>
   </div>
 
   <div class="overlay" id="overlay">
@@ -233,398 +217,297 @@
       <input class="field" id="fPlace" placeholder="ジム、会社など" autocomplete="off" autocorrect="off" spellcheck="false" />
       <label class="field-label">移動時間（分）</label>
       <input class="field" id="fTravel" type="number" inputmode="numeric" autocomplete="off" />
+      <label class="field-label">土日の移動時間（分・違うときだけ）</label>
+      <input class="field" id="fWeekend" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄なら平日と同じ" />
+      <label class="field-label">出る前の準備時間（分・任意）</label>
+      <input class="field" id="fPrep" type="number" inputmode="numeric" autocomplete="off" placeholder="身支度など。入れると「準備を始める時刻」も出ます" />
       <label class="field-label">メモ（任意）</label>
-      <textarea class="field" id="fNote" rows="3" autocomplete="off" placeholder="東口から徒歩5分、土曜は混む など"></textarea>
+      <textarea class="field" id="fNote" rows="3" autocomplete="off" placeholder="東口から徒歩5分 など"></textarea>
       <button class="save-btn" id="saveBtn">保存</button>
       <button class="delete-btn" id="deleteBtn" style="display:none">この行き先を削除</button>
     </div>
   </div>
 
 <script>
+  // 保存のキー・形式は v2 から変えていない（項目を足しただけ）
   const KEY = "departure_places_v2";
   const KEY_Q1 = "departure_query1_v1";
   const KEY_Q2 = "departure_query2_v1";
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
-  const HIST_MAX = 20;
-  const APP_VERSION = "3.1.0";
+  const HIST_MAX = 30;
+  const APP_VERSION = "3.2.0";
   const VERSION = APP_VERSION;
-  document.getElementById("versionText").textContent = "出発時刻 逆算アプリ — v" + VERSION;
-
-  const DEFAULTS = [
-    { id: "1", name: "ジム", travel: 25 },
-    { id: "2", name: "会社", travel: 40 },
-  ];
-
   const $ = (id) => document.getElementById(id);
+  $("versionText").textContent = "出発時刻 — v" + VERSION;
+  const DEFAULTS = [{ id: "1", name: "ジム", travel: 25 }, { id: "2", name: "会社", travel: 40 }];
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const WD = ["日", "月", "火", "水", "木", "金", "土"];
+  function load(k, def) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : def; } catch { return def; } }
+  function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
-  function loadPlaces() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      return raw ? JSON.parse(raw) : DEFAULTS.slice();
-    } catch { return DEFAULTS.slice(); }
-  }
-  function savePlaces() { localStorage.setItem(KEY, JSON.stringify(places)); }
-  function loadQuery(k) {
-    try {
-      const raw = localStorage.getItem(k);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  }
-  function saveQ1() {
-    localStorage.setItem(KEY_Q1, JSON.stringify({ destId: sel1, h: $("arriveH").value, m: $("arriveM").value }));
-  }
-  function saveQ2() {
-    localStorage.setItem(KEY_Q2, JSON.stringify({ destId: sel2, h: $("arrive2H").value, m: $("arrive2M").value }));
-  }
+  let places = load(KEY, DEFAULTS.slice());
+  let history = load(KEY_HIST, []);
+  let favorites = load(KEY_FAV, []);
+  const savePlaces = () => store(KEY, places);
+  const saveHistory = () => store(KEY_HIST, history);
+  const saveFavorites = () => store(KEY_FAV, favorites);
+  const placeById = (id) => places.find((p) => p.id === id);
 
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(KEY_HIST);
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+  // パネルの状態 { destId, h, m, buf }
+  function initQ(k, idx) {
+    const q = load(k, null) || {};
+    const fallback = places[idx] ? places[idx].id : (places[0] ? places[0].id : null);
+    return { destId: placeById(q.destId) ? q.destId : fallback, h: q.h || "10", m: q.m || "00", buf: +q.buf || 0 };
   }
-  function saveHistory() { localStorage.setItem(KEY_HIST, JSON.stringify(history)); }
+  const panels = { 1: initQ(KEY_Q1, 0), 2: initQ(KEY_Q2, 1) };
+  const saveQ = (n) => store(n === 1 ? KEY_Q1 : KEY_Q2, panels[n]);
+  let editMode = false, editingId = null;
 
-  function loadFavorites() {
-    try {
-      const raw = localStorage.getItem(KEY_FAV);
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+  // ---------- 計算 ----------
+  // 到着が今より前なら「明日」として数える（夜に翌朝の出発を調べるとき）
+  function plan(n) {
+    const q = panels[n], p = placeById(q.destId);
+    if (!p) return null;
+    const now = new Date();
+    const arrive = new Date(); arrive.setHours(+q.h, +q.m, 0, 0);
+    let tomorrow = false;
+    if (arrive < now - 0) { const leaveToday = new Date(arrive.getTime() - (travelFor(p, arrive) + q.buf) * 60000); if (leaveToday < now && arrive < now) { arrive.setDate(arrive.getDate() + 1); tomorrow = true; } }
+    const travel = travelFor(p, arrive);
+    const weekendDiff = isWeekend(arrive) && p.weekendTravel > 0 && p.weekendTravel !== p.travel;
+    const leave = new Date(arrive.getTime() - (travel + q.buf) * 60000);
+    const prepStart = p.prep > 0 ? new Date(leave.getTime() - p.prep * 60000) : null;
+    return { p, arrive, leave, prepStart, travel, tomorrow, weekendDiff, mins: Math.round((leave - now) / 60000) };
   }
-  function saveFavorites() { localStorage.setItem(KEY_FAV, JSON.stringify(favorites)); }
+  const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+  const travelFor = (p, d) => (isWeekend(d) && p.weekendTravel > 0) ? p.weekendTravel : (Number(p.travel) || 0);
+  const fmt = (d) => pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  function minsText(m) { if (m < 60) return m + "分"; const h = Math.floor(m / 60), r = m % 60; return h + "時間" + (r ? r + "分" : ""); }
 
-  let favorites = loadFavorites();
-
-  function isFav(destId, arrive) {
-    return favorites.some(f => f.destId === destId && f.arrive === arrive);
+  // ---------- パネル描画 ----------
+  function hourOpts(v) { let s = ""; for (let h = 0; h < 24; h++) s += '<option' + (pad2(h) === v ? ' selected' : '') + '>' + pad2(h) + '</option>'; return s; }
+  function minOpts(v) { let s = ""; for (let m = 0; m < 60; m += 5) s += '<option' + (pad2(m) === v ? ' selected' : '') + '>' + pad2(m) + '</option>'; return s; }
+  function renderPanel(n) {
+    const el = $("panel" + n), q = panels[n];
+    const chips = places.map((p) => '<button class="pchip' + (p.id === q.destId ? ' on' : '') + '" data-pick="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</button>').join('') + '<button class="pchip add" data-addplace="1">＋</button>';
+    el.innerHTML =
+      '<div class="card"><div class="label">行き先</div><div class="place-chips">' + chips + '</div>' +
+        (n === 1 ? '<div class="chip-hint">長押しで行き先の設定を変更</div>' : '') + '</div>' +
+      '<div class="card"><div class="label">着きたい時刻</div>' +
+        '<div class="time-row"><button class="step-btn" data-step="-10">−10</button>' +
+        '<div class="time-select"><select data-h>' + hourOpts(q.h) + '</select><span class="colon">:</span><select data-m>' + minOpts(q.m) + '</select></div>' +
+        '<button class="step-btn" data-step="10">＋10</button></div>' +
+        '<div class="buf-row"><span class="label">余裕をもって着く</span><div class="seg">' + [0, 5, 10].map((b) => '<button data-buf="' + b + '" class="' + (q.buf === b ? 'on' : '') + '">' + (b ? b + '分前' : 'ぴったり') + '</button>').join('') + '</div></div>' +
+      '</div><div class="res"></div>';
+    renderResult(n);
   }
-  function toggleFav(destId, arrive) {
-    if (isFav(destId, arrive)) {
-      favorites = favorites.filter(f => !(f.destId === destId && f.arrive === arrive));
-    } else {
-      favorites.unshift({ destId: destId, arrive: arrive });
-    }
-    saveFavorites();
-    renderFavorites();
-    renderHistory();
-  }
-
-  let history = loadHistory();
-  const histTimers = { 1: null, 2: null };
-
-  // 手を止めて結果を見ている状態になってから記録する。
-  // 操作を続けている間はタイマーがリセットされ、通過点は残らない。
-  const HIST_DELAY = 6000;
-  function recordLater(panel, destId, arriveStr) {
-    clearTimeout(histTimers[panel]);
-    histTimers[panel] = setTimeout(() => record(destId, arriveStr), HIST_DELAY);
-  }
-  function record(destId, arriveStr) {
-    const p = places.find(x => x.id === destId);
-    if (!p) return;
-    // 同じ組み合わせは重複させず、最新として先頭へ
-    history = history.filter(h => !(h.destId === destId && h.arrive === arriveStr));
-    history.unshift({ destId: destId, arrive: arriveStr, at: Date.now() });
-    if (history.length > HIST_MAX) history = history.slice(0, HIST_MAX);
-    saveHistory();
-    renderHistory();
-  }
-
-  let places = loadPlaces();
-  const q1saved = loadQuery(KEY_Q1);
-  const q2saved = loadQuery(KEY_Q2);
-  let sel1 = (q1saved && places.some(p => p.id === q1saved.destId)) ? q1saved.destId
-           : (places[0] ? places[0].id : null);
-  let sel2 = (q2saved && places.some(p => p.id === q2saved.destId)) ? q2saved.destId
-           : (places[1] ? places[1].id : (places[0] ? places[0].id : null));
-  let editingId = null;
-  let editMode = false;
-
-  function getArrive1() { return $("arriveH").value + ":" + $("arriveM").value; }
-  function getArrive2() { return $("arrive2H").value + ":" + $("arrive2M").value; }
-
-  function fillHMOptions(hSel, mSel) {
-    for (let h = 0; h < 24; h++) {
-      const o = document.createElement("option");
-      o.value = String(h).padStart(2, "0"); o.textContent = String(h).padStart(2, "0");
-      hSel.appendChild(o);
-    }
-    for (let m = 0; m < 60; m += 10) {
-      const o = document.createElement("option");
-      o.value = String(m).padStart(2, "0"); o.textContent = String(m).padStart(2, "0");
-      mSel.appendChild(o);
-    }
-  }
-
-  function initPanel1() {
-    fillHMOptions($("arriveH"), $("arriveM"));
-    $("arriveH").value = (q1saved && q1saved.h) ? q1saved.h : "10";
-    $("arriveM").value = (q1saved && q1saved.m) ? q1saved.m : "00";
-    const onChange1 = () => { renderResult1(); saveQ1(); recordLater(1, sel1, getArrive1()); };
-    $("arriveH").addEventListener("change", onChange1);
-    $("arriveM").addEventListener("change", onChange1);
-    $("dest1").addEventListener("change", () => { sel1 = $("dest1").value; onChange1(); });
-  }
-  function initPanel2() {
-    fillHMOptions($("arrive2H"), $("arrive2M"));
-    $("arrive2H").value = (q2saved && q2saved.h) ? q2saved.h : "10";
-    $("arrive2M").value = (q2saved && q2saved.m) ? q2saved.m : "00";
-    const onChange2 = () => { renderResult2(); saveQ2(); recordLater(2, sel2, getArrive2()); };
-    $("arrive2H").addEventListener("change", onChange2);
-    $("arrive2M").addEventListener("change", onChange2);
-    $("dest2").addEventListener("change", () => { sel2 = $("dest2").value; onChange2(); });
-  }
-
-  function refreshDestOptions(selectId, currentSel) {
-    const s = $(selectId);
-    s.innerHTML = "";
-    places.forEach(p => {
-      const o = document.createElement("option");
-      o.value = p.id; o.textContent = p.name;
-      s.appendChild(o);
-    });
-    if (currentSel && places.some(p => p.id === currentSel)) {
-      s.value = currentSel;
-    }
-  }
-
-  function calc(arriveStr, travel) {
-    const [h, m] = arriveStr.split(":").map(Number);
-    const a = new Date(); a.setHours(h, m, 0, 0);
-    return new Date(a.getTime() - travel * 60000);
-  }
-  function fmt(d) {
-    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-  }
-
-  function renderChips() {
-    const c = $("chips");
-    c.innerHTML = "";
-    c.className = "chips" + (editMode ? " editing" : "");
-    if (!editMode) return;
-
-    places.forEach((p, i) => {
-      const row = document.createElement("div");
-      row.className = "row";
-      const up = document.createElement("button");
-      up.className = "move-btn"; up.textContent = "↑";
-      up.title = "上へ"; up.disabled = i === 0;
-      up.onclick = () => moveItem(i, -1);
-      const down = document.createElement("button");
-      down.className = "move-btn"; down.textContent = "↓";
-      down.title = "下へ"; down.disabled = i === places.length - 1;
-      down.onclick = () => moveItem(i, 1);
-      const name = document.createElement("span");
-      name.className = "row-name"; name.textContent = p.name;
-      const meta = document.createElement("span");
-      meta.className = "row-meta";
-      meta.textContent = "移動 " + p.travel + "分" + (p.note && p.note.trim() ? " ✎" : "");
-      const del = document.createElement("button");
-      del.className = "del-btn"; del.textContent = "✕";
-      del.title = "削除";
-      del.onclick = () => removeItem(p.id);
-      row.appendChild(up); row.appendChild(down);
-      row.appendChild(name); row.appendChild(meta); row.appendChild(del);
-      c.appendChild(row);
-    });
-
-    const add = document.createElement("button");
-    add.className = "add-btn-full";
-    add.textContent = "＋ 行き先を追加";
-    add.onclick = () => openEditor("new");
-    c.appendChild(add);
-  }
-
-  function moveItem(index, dir) {
-    const j = index + dir;
-    if (j < 0 || j >= places.length) return;
-    const tmp = places[index]; places[index] = places[j]; places[j] = tmp;
-    renderAll();
-  }
-  async function removeItem(id) {
-    const p = places.find((x) => x.id === id);
-    if (!p) return;
-    if (!(await uiAsk("「" + p.name + "」を削除しますか？", "削除する"))) return;
-    places = places.filter((x) => x.id !== id);
-    favorites = favorites.filter(f => f.destId !== id);
-    saveFavorites();
-    if (sel1 === id) sel1 = places[0] ? places[0].id : null;
-    if (sel2 === id) sel2 = places[0] ? places[0].id : null;
-    renderAll();
-  }
-
-  function renderResultInto(area, cur, arriveStr) {
-    if (!cur) { area.innerHTML = '<div class="empty">行き先を選んでください。</div>'; return; }
-    const leave = calc(arriveStr, cur.travel);
-    const noteHtml = (cur.note && cur.note.trim())
-      ? '<div class="result-note"><span class="note-mark">メモ</span>' + escapeHtml(cur.note) + '</div>'
-      : '';
+  function renderResult(n) {
+    const area = $("panel" + n).querySelector(".res");
+    const r = plan(n);
+    if (!r) { area.innerHTML = '<div class="empty">行き先を選んでください。</div>'; return; }
+    const cd = r.mins >= 0
+      ? '<div class="countdown">出発まで あと ' + minsText(r.mins) + '</div>'
+      : '<div class="countdown late">出る時刻を ' + minsText(-r.mins) + ' 過ぎています</div>';
+    const prep = r.prepStart ? '<span class="flow-item prep">' + fmt(r.prepStart) + '<small>準備開始</small></span><span class="arrow">→</span>' : '';
+    const buf = panels[n].buf ? '<span class="arrow">＋</span><span class="flow-item">余裕 ' + panels[n].buf + '分</span>' : '';
     area.innerHTML =
       '<div class="result">' +
-        '<div class="result-label">家を出る時刻</div>' +
-        '<div class="big-time">' + fmt(leave) + '</div>' +
-        '<div class="flow">' +
-          '<span class="flow-item">' + fmt(leave) + '<small>出発</small></span>' +
-          '<span class="arrow">→</span>' +
-          '<span class="flow-item">移動 ' + cur.travel + '分</span>' +
-          '<span class="arrow">→</span>' +
-          '<span class="flow-item">' + arriveStr + '<small>' + escapeHtml(cur.name) + '着</small></span>' +
+        '<div class="result-label">家を出る時刻' + (r.tomorrow ? '<span class="day-tag">明日' + (r.arrive.getMonth() + 1) + '/' + r.arrive.getDate() + '(' + WD[r.arrive.getDay()] + ')</span>' : '') + '</div>' +
+        '<div class="big-time">' + fmt(r.leave) + '</div>' + cd +
+        '<div class="flow">' + prep +
+          '<span class="flow-item">' + fmt(r.leave) + '<small>出発</small></span><span class="arrow">→</span>' +
+          '<span class="flow-item">移動 ' + r.travel + '分</span>' + buf + '<span class="arrow">→</span>' +
+          '<span class="flow-item">' + pad2(panels[n].h) + ':' + pad2(panels[n].m) + '<small>' + escapeHtml(r.p.name) + '着</small></span>' +
         '</div>' +
-        '<button class="edit-link" data-edit-id="' + escapeHtml(cur.id) + '">' + escapeHtml(cur.name) + 'の設定を変更 ›</button>' +
-        noteHtml +
+        (r.weekendDiff ? '<div class="wk-note">土日の移動時間（' + r.p.weekendTravel + '分）で計算しています</div>' : '') +
+        '<button class="edit-link" data-editplace="' + escapeHtml(r.p.id) + '">' + escapeHtml(r.p.name) + 'の設定を変更 ›</button>' +
+        (r.p.note && r.p.note.trim() ? '<div class="result-note"><span class="note-mark">メモ</span>' + escapeHtml(r.p.note) + '</div>' : '') +
       '</div>';
-    const btn = area.querySelector('.edit-link');
-    if (btn) btn.onclick = () => openEditor(cur.id);
   }
-
-  function renderResult1() {
-    renderResultInto($("resultArea"), places.find(p => p.id === sel1), getArrive1());
+  // 時刻を変えたら、その行き先の「いつもの到着時刻」として覚える
+  function changed(n, { remember = true } = {}) {
+    const q = panels[n];
+    if (remember) { const p = placeById(q.destId); if (p) { p.lastArrive = q.h + ":" + q.m; savePlaces(); } }
+    saveQ(n); renderResult(n); recordLater(n);
   }
-  function renderResult2() {
-    renderResultInto($("resultArea2"), places.find(p => p.id === sel2), getArrive2());
+  function pick(n, id) {
+    const q = panels[n], p = placeById(id); if (!p) return;
+    q.destId = id;
+    if (p.lastArrive) { const [h, m] = p.lastArrive.split(":"); q.h = h; q.m = m; }
+    saveQ(n); renderPanel(n); recordLater(n);
   }
-
-  function buildEntry(h, className) {
-    const p = places.find(x => x.id === h.destId);
-    const leave = fmt(calc(h.arrive, p.travel));
-    const wrap = document.createElement("div");
-    wrap.className = className;
-
-    const body = document.createElement("span");
-    body.style.cssText = "display:inline-flex;align-items:baseline;gap:8px;cursor:pointer";
-    body.innerHTML =
-      '<span class="hist-name">' + escapeHtml(p.name) + '</span>' +
-      '<span class="hist-times"><span class="hist-leave">' + leave + '</span> → ' + h.arrive + '着</span>';
-    body.title = "クリックで左側に呼び出す";
-    body.onclick = () => applyHistory(h);
-
-    const star = document.createElement("button");
-    const on = isFav(h.destId, h.arrive);
-    star.className = "star-btn" + (on ? " on" : "");
-    star.textContent = on ? "★" : "☆";
-    star.title = on ? "お気に入りから外す" : "お気に入りに追加";
-    star.onclick = (e) => { e.stopPropagation(); toggleFav(h.destId, h.arrive); };
-
-    wrap.appendChild(body);
-    wrap.appendChild(star);
-    return wrap;
+  function step(n, d) {
+    const q = panels[n]; let t = (+q.h) * 60 + (+q.m) + d; t = ((t % 1440) + 1440) % 1440;
+    t = Math.round(t / 5) * 5 % 1440;
+    q.h = pad2(Math.floor(t / 60)); q.m = pad2(t % 60);
+    const el = $("panel" + n); el.querySelector("[data-h]").value = q.h; el.querySelector("[data-m]").value = q.m;
+    changed(n);
   }
+  [1, 2].forEach((n) => {
+    const el = $("panel" + n);
+    el.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t.closest("[data-pick]")) { if (lpFired) { lpFired = false; return; } return pick(n, t.closest("[data-pick]").dataset.pick); }
+      if (t.closest("[data-addplace]")) return openEditor("new", n);
+      if (t.closest("[data-step]")) return step(n, +t.closest("[data-step]").dataset.step);
+      if (t.closest("[data-buf]")) { panels[n].buf = +t.closest("[data-buf]").dataset.buf; saveQ(n); renderPanel(n); return; }
+      if (t.closest("[data-editplace]")) return openEditor(t.closest("[data-editplace]").dataset.editplace);
+    });
+    el.addEventListener("change", (e) => {
+      if (e.target.matches("[data-h]")) { panels[n].h = e.target.value; changed(n); }
+      if (e.target.matches("[data-m]")) { panels[n].m = e.target.value; changed(n); }
+    });
+    // 長押しで行き先の設定
+    let lpT = 0;
+    el.addEventListener("pointerdown", (e) => { const c = e.target.closest("[data-pick]"); if (!c) return; clearTimeout(lpT); lpT = setTimeout(() => { lpFired = true; openEditor(c.dataset.pick); }, 550); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => el.addEventListener(ev, () => clearTimeout(lpT)));
+    el.addEventListener("contextmenu", (e) => { if (e.target.closest("[data-pick]")) e.preventDefault(); });
+  });
+  let lpFired = false;
+  // 1分ごとに「あと◯分」を更新
+  setInterval(() => { if (!editMode && document.visibilityState === "visible") { renderResult(1); if (getComputedStyle($("panel2")).display !== "none") renderResult(2); } }, 30000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !editMode) { renderResult(1); renderResult(2); } });
 
-  function renderFavorites() {
-    const list = $("favList");
-    list.innerHTML = "";
-    const valid = favorites.filter(f => places.some(p => p.id === f.destId));
-    if (!valid.length) {
-      list.innerHTML = '<div class="history-empty">履歴の☆を押すと、ここに固定できます。</div>';
-      return;
+  // ---------- よく使う組み合わせ（お気に入り＋使った回数） ----------
+  const histTimers = { 1: null, 2: null };
+  function recordLater(n) {
+    clearTimeout(histTimers[n]);
+    histTimers[n] = setTimeout(() => { const q = panels[n]; record(q.destId, q.h + ":" + q.m); }, 6000);
+  }
+  function record(destId, arrive) {
+    if (!placeById(destId)) return;
+    const old = history.find((h) => h.destId === destId && h.arrive === arrive);
+    history = history.filter((h) => h !== old);
+    history.unshift({ destId, arrive, at: Date.now(), n: (old && old.n ? old.n : 1) + (old ? 1 : 0) });
+    if (history.length > HIST_MAX) history = history.slice(0, HIST_MAX);
+    saveHistory(); renderUsual();
+  }
+  const isFav = (d, a) => favorites.some((f) => f.destId === d && f.arrive === a);
+  function toggleFav(d, a) {
+    if (isFav(d, a)) favorites = favorites.filter((f) => !(f.destId === d && f.arrive === a));
+    else favorites.unshift({ destId: d, arrive: a });
+    saveFavorites(); renderUsual();
+  }
+  function renderUsual() {
+    const list = $("usualList");
+    const map = new Map();
+    for (const h of history) if (placeById(h.destId)) map.set(h.destId + "|" + h.arrive, { destId: h.destId, arrive: h.arrive, n: h.n || 1, at: h.at || 0 });
+    for (const f of favorites) if (placeById(f.destId) && !map.has(f.destId + "|" + f.arrive)) map.set(f.destId + "|" + f.arrive, { destId: f.destId, arrive: f.arrive, n: 0, at: 0 });
+    const items = [...map.values()].sort((a, b) => (isFav(b.destId, b.arrive) - isFav(a.destId, a.arrive)) || (b.n - a.n) || (b.at - a.at)).slice(0, 8);
+    if (!items.length) { list.innerHTML = '<div class="history-empty">行き先と時刻を選ぶと、よく使う組み合わせがここに並びます。☆で上に固定できます。</div>'; return; }
+    list.innerHTML = items.map((it) => {
+      const p = placeById(it.destId);
+      const [h, m] = it.arrive.split(":"); const a = new Date(); a.setHours(+h, +m, 0, 0);
+      const leave = fmt(new Date(a.getTime() - travelFor(p, a) * 60000));
+      const on = isFav(it.destId, it.arrive);
+      return '<div class="hist-item" data-use="' + escapeHtml(it.destId) + '|' + it.arrive + '"><span style="display:flex;align-items:baseline;gap:8px"><span class="hist-name">' + escapeHtml(p.name) + (it.n > 1 ? '<span class="usual-count">' + it.n + '回</span>' : '') + '</span><span class="hist-times"><span class="hist-leave">' + leave + '</span> → ' + it.arrive + '着</span></span>' +
+        '<button class="star-btn' + (on ? ' on' : '') + '" data-star="' + escapeHtml(it.destId) + '|' + it.arrive + '">' + (on ? '★' : '☆') + '</button></div>';
+    }).join('');
+  }
+  $("usualList").addEventListener("click", (e) => {
+    const s = e.target.closest("[data-star]");
+    if (s) { const [d, a] = s.dataset.star.split("|"); return toggleFav(d, a); }
+    const u = e.target.closest("[data-use]");
+    if (u) {
+      const [d, a] = u.dataset.use.split("|"); const [h, m] = a.split(":");
+      Object.assign(panels[1], { destId: d, h, m }); saveQ(1); renderPanel(1);
+      clearTimeout(histTimers[1]); record(d, a); window.scrollTo({ top: 0, behavior: "smooth" });
     }
-    valid.forEach(f => list.appendChild(buildEntry(f, "fav-item")));
-  }
-
-  function renderHistory() {
-    const list = $("historyList");
-    list.innerHTML = "";
-    // 削除済みの行き先を参照する履歴は除外して表示
-    const valid = history.filter(h => places.some(p => p.id === h.destId));
-    if (!valid.length) {
-      list.innerHTML = '<div class="history-empty">まだありません。行き先と時刻を選ぶと、ここに残ります。</div>';
-      return;
-    }
-    valid.forEach(h => list.appendChild(buildEntry(h, "hist-item")));
-  }
-
-  function applyHistory(h) {
-    const [hh, mm] = h.arrive.split(":");
-    sel1 = h.destId;
-    $("arriveH").value = hh;
-    $("arriveM").value = mm;
-    refreshDestOptions("dest1", sel1);
-    renderResult1();
-    saveQ1();
-    // 呼び出したものを最新として繰り上げる
-    clearTimeout(histTimers[1]);
-    record(h.destId, h.arrive);
-  }
-
+  });
   $("clearHistBtn").onclick = async () => {
     if (!history.length) return;
-    if (!(await uiAsk("履歴をすべて消しますか？", "消す"))) return;
-    history = [];
-    saveHistory();
-    renderHistory();
+    if (!(await uiAsk("使った回数の記録を消しますか？\n☆で固定したものは残ります。", "消す"))) return;
+    history = []; saveHistory(); renderUsual();
   };
+
+  // ---------- 行き先の設定（編集モード：ドラッグで並べ替え） ----------
+  function renderChips() {
+    const c = $("chips");
+    c.className = "chips" + (editMode ? " editing" : "");
+    if (!editMode) { c.innerHTML = ""; return; }
+    c.innerHTML = places.map((p) => '<div class="row" data-id="' + escapeHtml(p.id) + '"><span class="grip" title="ドラッグで並べ替え">≡</span><span class="row-name" data-open="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</span><span class="row-meta">移動 ' + p.travel + '分' + (p.weekendTravel ? '（土日' + p.weekendTravel + '分）' : '') + (p.prep ? '・準備' + p.prep + '分' : '') + '</span><button class="del-btn" data-del="' + escapeHtml(p.id) + '">✕</button></div>').join('') +
+      '<button class="add-btn-full" id="addRowBtn">＋ 行き先を追加</button>';
+    $("addRowBtn").onclick = () => openEditor("new");
+  }
+  $("chips").addEventListener("click", (e) => {
+    const o = e.target.closest("[data-open]"); if (o) return openEditor(o.dataset.open);
+    const d = e.target.closest("[data-del]"); if (d) return removeItem(d.dataset.del);
+  });
+  // ドラッグ（≡ をつかんで上下に）
+  (function () {
+    let drag = null;
+    $("chips").addEventListener("pointerdown", (e) => {
+      const g = e.target.closest(".grip"); if (!g) return;
+      const row = g.closest(".row"); e.preventDefault();
+      const rows = [...$("chips").querySelectorAll(".row")];
+      drag = { row, startY: e.clientY, idx: rows.indexOf(row), rows, h: row.offsetHeight };
+      row.classList.add("dragging"); g.setPointerCapture(e.pointerId);
+    });
+    $("chips").addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dy = e.clientY - drag.startY; drag.row.style.transform = "translateY(" + dy + "px)";
+      drag.to = Math.max(0, Math.min(drag.rows.length - 1, drag.idx + Math.round(dy / drag.h)));
+    });
+    const end = () => {
+      if (!drag) return;
+      const { idx, to } = drag; drag.row.classList.remove("dragging"); drag.row.style.transform = ""; drag = null;
+      if (to !== undefined && to !== idx) { const [m] = places.splice(idx, 1); places.splice(to, 0, m); savePlaces(); }
+      renderAll();
+    };
+    $("chips").addEventListener("pointerup", end); $("chips").addEventListener("pointercancel", end);
+  })();
+  async function removeItem(id) {
+    const p = placeById(id); if (!p) return;
+    if (!(await uiAsk("「" + p.name + "」を削除しますか？", "削除する"))) return;
+    places = places.filter((x) => x.id !== id);
+    favorites = favorites.filter((f) => f.destId !== id); saveFavorites();
+    [1, 2].forEach((n) => { if (panels[n].destId === id) { panels[n].destId = places[0] ? places[0].id : null; saveQ(n); } });
+    savePlaces(); renderAll();
+  }
 
   function renderAll() {
     renderChips();
     $("compareGrid").style.display = editMode ? "none" : "";
-    $("historySec").style.display = editMode ? "none" : "";
+    $("usualSec").style.display = editMode ? "none" : "";
     $("dataSec").style.display = editMode ? "none" : "";
-    $("favSec").style.display = editMode ? "none" : "";
-    $("editToggle").classList.toggle("active", editMode);
     $("editToggle").textContent = editMode ? "完了" : "編集";
-    $("chipsTitle").textContent = editMode ? "行き先の設定" : "行き先 (" + places.length + "件)";
-    if (!editMode) {
-      refreshDestOptions("dest1", sel1);
-      refreshDestOptions("dest2", sel2);
-      renderResult1();
-      renderResult2();
-      renderHistory();
-      renderFavorites();
-    }
-    savePlaces();
+    $("editToggle").classList.toggle("active", editMode);
+    $("chipsTitle").textContent = editMode ? "行き先の設定（≡ をつかんで並べ替え）" : "";
+    if (!editMode) { renderPanel(1); renderPanel(2); renderUsual(); }
   }
-
   $("editToggle").onclick = () => { editMode = !editMode; renderAll(); };
 
-  function openEditor(id) {
-    editingId = id;
-    const isNew = id === "new";
-    const p = isNew ? null : places.find((x) => x.id === id);
+  // ---------- 行き先の編集シート ----------
+  let editingFor = 1;
+  function openEditor(id, panelN) {
+    editingId = id; editingFor = panelN || 1;
+    const isNew = id === "new", p = isNew ? null : placeById(id);
     $("modalTitle").textContent = isNew ? "行き先を追加" : "行き先を編集";
     $("fPlace").value = p ? p.name : "";
     $("fTravel").value = p ? p.travel : 30;
-    $("fNote").value = (p && p.note) ? p.note : "";
+    $("fWeekend").value = p && p.weekendTravel ? p.weekendTravel : "";
+    $("fPrep").value = p && p.prep ? p.prep : "";
+    $("fNote").value = p && p.note ? p.note : "";
     $("deleteBtn").style.display = isNew ? "none" : "block";
     $("overlay").classList.add("open");
-    setTimeout(() => $("fPlace").focus(), 50);
+    if (isNew) setTimeout(() => $("fPlace").focus(), 50);
   }
-  function closeEditor() { editingId = null; $("overlay").classList.remove("open"); }
-
+  function closeEditor() { editingId = null; $("overlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); }
   $("saveBtn").onclick = () => {
-    const name = $("fPlace").value.trim();
-    if (!name) return;
-    const travel = Number($("fTravel").value) || 0;
-    const note = $("fNote").value.trim();
+    const name = $("fPlace").value.trim(); if (!name) return;
+    const vals = { name, travel: Number($("fTravel").value) || 0, weekendTravel: Number($("fWeekend").value) || 0, prep: Number($("fPrep").value) || 0, note: $("fNote").value.trim() };
     if (editingId === "new") {
-      const np = { id: String(Date.now()), name, travel, note };
-      places.push(np);
-      // 新規追加した行き先を右パネル側に自動セット (見やすいので)
-      sel2 = np.id;
-      saveQ2();
-    } else {
-      places = places.map((p) => p.id === editingId ? { ...p, name, travel, note } : p);
-    }
-    closeEditor(); renderAll();
+      const np = Object.assign({ id: String(Date.now()) }, vals); places.push(np);
+      panels[editingFor].destId = np.id; saveQ(editingFor);
+    } else places = places.map((p) => p.id === editingId ? Object.assign({}, p, vals) : p);
+    savePlaces(); closeEditor(); renderAll();
   };
-  $("deleteBtn").onclick = async () => {
-    const p0 = places.find((p) => p.id === editingId);
-    if (!(await uiAsk("「" + (p0 ? p0.name : "") + "」を削除しますか？", "削除する"))) return;
-    places = places.filter((p) => p.id !== editingId);
-    if (sel1 === editingId) sel1 = places[0] ? places[0].id : null;
-    if (sel2 === editingId) sel2 = places[0] ? places[0].id : null;
-    closeEditor(); renderAll();
-  };
+  $("deleteBtn").onclick = () => { const id = editingId; closeEditor(); removeItem(id); };
   $("closeBtn").onclick = closeEditor;
   $("overlay").onclick = (e) => { if (e.target.id === "overlay") closeEditor(); };
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   // ---------- バックアップ（全アプリ共通の作法） ----------
   const BK_KEY = "departure_lastBackupAt", SCHEMA = "departure.v1";
-  const pad2 = (n) => String(n).padStart(2, "0");
   function bkName() { const d = new Date(); return "出発時刻_" + d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + ".json"; }
   function bkAskSaved() {
     return new Promise((resolve) => {
@@ -650,7 +533,7 @@
   function bkText() { let t = 0; try { t = Number(localStorage.getItem(BK_KEY) || 0); } catch (e) {} if (!t) return "まだ一度もバックアップしていません。データはこの端末の中だけにあります。"; const d = Math.floor((Date.now() - t) / 86400000); return (d === 0 ? "前回のバックアップ：今日" : "前回のバックアップから " + d + "日") + "。データはこの端末の中だけにあります。"; }
   function renderBk() { $("bkNote").textContent = bkText(); }
   $("exportBtn").onclick = async () => {
-    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places, history, favorites, q1: loadQuery(KEY_Q1), q2: loadQuery(KEY_Q2) };
+    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places, history, favorites, q1: panels[1], q2: panels[2] };
     if (await bkSave(JSON.stringify(data, null, 2)) !== "ok") return;
     try { localStorage.setItem(BK_KEY, String(Date.now())); } catch (e) {}
     renderBk(); uiToast("書き出しました");
@@ -663,17 +546,14 @@
       if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("出発時刻のデータではないようです"); return; }
       if (!(await uiAsk("いまの行き先・履歴・お気に入りを、このファイルの内容に置き換えますか？", "置き換える"))) return;
       places = data.places; history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
-      saveHistory(); saveFavorites();
-      if (data.q1) localStorage.setItem(KEY_Q1, JSON.stringify(data.q1));
-      if (data.q2) localStorage.setItem(KEY_Q2, JSON.stringify(data.q2));
-      sel1 = data.q1 && places.some(p => p.id === data.q1.destId) ? data.q1.destId : (places[0] ? places[0].id : null);
-      sel2 = data.q2 && places.some(p => p.id === data.q2.destId) ? data.q2.destId : (places[1] ? places[1].id : sel1);
+      savePlaces(); saveHistory(); saveFavorites();
+      if (data.q1) store(KEY_Q1, data.q1);
+      if (data.q2) store(KEY_Q2, data.q2);
+      panels[1] = initQ(KEY_Q1, 0); panels[2] = initQ(KEY_Q2, 1);
       renderAll(); uiToast("取り込みました（行き先 " + places.length + "件）");
     } catch (err) { uiToast("取り込めませんでした"); }
   });
 
-  initPanel1();
-  initPanel2();
   renderAll();
   renderBk();
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
