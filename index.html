@@ -157,23 +157,35 @@
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
 
+  /* 操作するところ：うすいオレンジの面＋番号付きの見出しで「ここを触る」と一目で分かるように（結果は濃いオレンジの面） */
+  .compare-col > .card { background: #FFF6F1; border: 1.5px solid #F8D9CC; }
+  .compare-col > .card .label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+  .stepno { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .compare-col > .card .buf-row .label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; }
+  .compare-col > .card .buf-row { border-top-color: #F8D9CC; }
   /* v3.2 追加 */
   /* 行き先は折り返して全部見せる（横スクロールはPCで見えない・動かせないため） */
   .place-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
   .place-chips::-webkit-scrollbar { display: none; }
-  .pchip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; border-radius: 999px; padding: 9px 16px; font-size: 16px; font-weight: 600; background: var(--fill); color: var(--ink); cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  .pchip.on { background: var(--accent); color: #fff; }
+  .pchip { border: 1.5px solid #F2CDBE !important; background: #fff !important; transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; border-radius: 999px; padding: 9px 16px; font-size: 16px; font-weight: 600; background: var(--fill); color: var(--ink); cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .pchip.on { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff; box-shadow: 0 4px 12px -4px rgba(232,100,59,.6); }
+  .pchip.add { background: var(--accent-soft) !important; border-style: dashed !important; border-color: var(--accent) !important; }
+  @media (hover: hover) { .pchip:hover { border-color: var(--accent) !important; transform: translateY(-1px); } .step-btn:hover { background: #FAD6C8; } .time-select select:hover { border-color: var(--accent); } }
+  .pchip:active { transform: scale(.96); }
   .pchip.add { color: var(--accent); background: var(--accent-soft); }
   .chip-hint { font-size: 12px; color: var(--tertiary); margin: 6px 2px 0; }
   .time-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .step-btn { width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); font-size: 17px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
   .step-btn:active { opacity: .6; }
-  .time-select select { font-size: 34px; }
+  .time-select select { font-size: 34px; background: #fff; border: 1.5px solid #F2CDBE; transition: border-color .15s ease; }
+  .time-select select:focus { border-color: var(--accent); }
+
   .buf-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: .5px solid var(--sep); }
   .buf-row .label { margin: 0; }
-  .seg { display: inline-flex; background: var(--fill); border-radius: 9px; padding: 2px; }
+  .seg { display: inline-flex; background: #fff; border: 1px solid #F2CDBE; border-radius: 9px; padding: 2px; }
   .seg button { border: 0; background: none; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 7px; color: var(--ink); cursor: pointer; }
-  .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .seg button.on { background: var(--accent); color: #fff; }
   .day-tag { display: inline-block; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.22); border-radius: 6px; padding: 1px 7px; margin-left: 6px; vertical-align: 2px; }
   .countdown { font-size: 17px; font-weight: 700; margin: -6px 0 12px; }
   .countdown.late { background: #fff; color: #D12A20; display: inline-block; border-radius: 8px; padding: 3px 10px; }
@@ -254,7 +266,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.6.0";
+  const APP_VERSION = "3.7.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -309,9 +321,9 @@
     const el = $("panel" + n), q = panels[n];
     const chips = places.map((p) => '<button class="pchip' + (p.id === q.destId ? ' on' : '') + '" data-pick="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</button>').join('') + '<button class="pchip add" data-addplace="1">＋</button>';
     el.innerHTML = '<div class="panel-tag">' + (n === 1 ? 'いつもの' : '比べる') + '</div>' +
-      '<div class="card"><div class="label">行き先</div><div class="place-chips">' + chips + '</div>' +
+      '<div class="card"><div class="label"><span class="stepno">1</span>行き先を選ぶ</div><div class="place-chips">' + chips + '</div>' +
         (n === 1 ? '<div class="chip-hint">' + (matchMedia("(pointer: coarse)").matches ? '長押し' : '右クリック') + 'で行き先の設定を変更</div>' : '') + '</div>' +
-      '<div class="card"><div class="label">着きたい時刻</div>' +
+      '<div class="card"><div class="label"><span class="stepno">2</span>着きたい時刻に合わせる</div>' +
         '<div class="time-row"><button class="step-btn" data-step="-10">−10</button>' +
         '<div class="time-select"><select data-h>' + hourOpts(q.h) + '</select><span class="colon">:</span><select data-m>' + minOpts(q.m) + '</select></div>' +
         '<button class="step-btn" data-step="10">＋10</button></div>' +
