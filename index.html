@@ -6,11 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="出発時刻" />
+<meta name="apple-mobile-web-app-title" content="ナンジデル" />
 <meta name="theme-color" content="#F2F2F7" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-v1-192.png" />
-<title>出発時刻 逆算アプリ</title>
+<title>ナンジデル</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%231c1a17'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='20'%20fill='none'%20stroke='%23f0a868'%20stroke-width='3'/%3E%3Cline%20x1='32'%20y1='32'%20x2='32'%20y2='18'%20stroke='%23f0a868'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Cline%20x1='32'%20y1='32'%20x2='43'%20y2='38'%20stroke='%23c8553d'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='3'%20fill='%23f0a868'/%3E%3C/svg%3E" />
 <style>
   :root {
@@ -171,7 +171,7 @@
 <body>
   <div class="shell">
     <header>
-      <h1>出発時刻</h1>
+      <h1>ナンジデル</h1>
       <p class="sub">着きたい時刻から、家を出る時刻を逆算します</p>
     </header>
 
@@ -236,10 +236,10 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.2.0";
+  const APP_VERSION = "3.3.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
-  $("versionText").textContent = "出発時刻 — v" + VERSION;
+  $("versionText").textContent = "ナンジデル — v" + VERSION;
   const DEFAULTS = [{ id: "1", name: "ジム", travel: 25 }, { id: "2", name: "会社", travel: 40 }];
   const pad2 = (n) => String(n).padStart(2, "0");
   const WD = ["日", "月", "火", "水", "木", "金", "土"];
@@ -508,7 +508,7 @@
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   // ---------- バックアップ（全アプリ共通の作法） ----------
   const BK_KEY = "departure_lastBackupAt", SCHEMA = "departure.v1";
-  function bkName() { const d = new Date(); return "出発時刻_" + d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + ".json"; }
+  function bkName() { const d = new Date(); return "ナンジデル_" + d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + ".json"; }
   function bkAskSaved() {
     return new Promise((resolve) => {
       const bg = document.createElement("div");
@@ -543,7 +543,7 @@
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     try {
       const data = JSON.parse(await f.text());
-      if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("出発時刻のデータではないようです"); return; }
+      if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("ナンジデルのデータではないようです"); return; }
       if (!(await uiAsk("いまの行き先・履歴・お気に入りを、このファイルの内容に置き換えますか？", "置き換える"))) return;
       places = data.places; history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
       savePlaces(); saveHistory(); saveFavorites();

@@ -1,6 +1,6 @@
 {
-  "name": "出発時刻 逆算",
-  "short_name": "出発時刻",
+  "name": "ナンジデル",
+  "short_name": "ナンジデル",
   "description": "着きたい時刻から、家を出る時刻を逆算する",
   "start_url": "./",
   "scope": "./",
@@ -9,7 +9,17 @@
   "theme_color": "#f4f0e8",
   "orientation": "portrait",
   "icons": [
-    { "src": "icon-v1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-v1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icon-v1-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-v1-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
