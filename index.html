@@ -232,6 +232,10 @@
   .ride-place h3 + .leg { border-top: 0; }
   .leg-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .leg-where { font-size: 15px; font-weight: 600; }
+  .leg-line { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+  .st-pair { display: flex; align-items: flex-end; gap: 6px; }
+  .st-pair > div { flex: 1; min-width: 0; }
+  .st-arrow { flex: none; padding-bottom: 12px; color: var(--muted); font-weight: 700; }
   .leg-pos { flex: none; font-size: 14px; font-weight: 700; color: var(--accent); }
   .leg-sub { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
   .train { display: flex; align-items: center; gap: 3px; margin-top: 8px; }
@@ -328,8 +332,13 @@
         <h2 class="modal-title" id="rideTitle">乗る位置</h2>
         <button class="icon-btn" id="rideClose">×</button>
       </div>
-      <label class="field-label">どこで乗る？（駅・路線）</label>
-      <input class="field" id="rWhere" placeholder="例：池袋（有楽町線）" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <div class="st-pair">
+        <div><label class="field-label">乗る駅</label><input class="field" id="rWhere" placeholder="例：池袋" autocomplete="off" autocorrect="off" spellcheck="false" /></div>
+        <span class="st-arrow">→</span>
+        <div><label class="field-label">降りる駅</label><input class="field" id="rTo" placeholder="例：新宿三丁目" autocomplete="off" autocorrect="off" spellcheck="false" /></div>
+      </div>
+      <label class="field-label">路線・方面（任意）</label>
+      <input class="field" id="rLine" placeholder="例：副都心線 渋谷方面" autocomplete="off" autocorrect="off" spellcheck="false" />
       <label class="field-label">位置</label>
       <div class="pos-seg" id="rPos"><button data-pos="back">後ろ寄り</button><button data-pos="mid">真ん中</button><button data-pos="front">先頭寄り</button></div>
       <label class="field-label">号車・ドア（任意）</label>
@@ -364,7 +373,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.12.0";
+  const APP_VERSION = "3.13.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -661,10 +670,11 @@
     for (let i = 0; i < 10; i++) s += '<span class="car' + (hit.includes(i) ? ' hit' : '') + (i === 9 ? ' head' : '') + '"></span>';
     return s + '<span class="dir">進行方向 ▶</span></div>';
   }
+  const routeText = (l) => (l.where || '？') + (l.to ? ' → ' + l.to : '');
   function rideChipsHtml(p) {
     const legs = p.ride || [];
     if (!legs.length) return '';
-    return '<div class="ride-chips">' + legs.slice(0, 3).map((l) => '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">🚃 ' + escapeHtml(l.where || '駅') + ' <b>' + POS_LABEL[l.pos] + '</b>' + (l.car ? '・' + escapeHtml(l.car) : '') + '</button>').join('') + (legs.length > 3 ? '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">ほか' + (legs.length - 3) + '件</button>' : '') + '</div>';
+    return '<div class="ride-chips">' + legs.slice(0, 3).map((l) => '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">🚃 ' + escapeHtml(routeText(l)) + ' <b>' + POS_LABEL[l.pos] + '</b>' + (l.car ? '・' + escapeHtml(l.car) : '') + '</button>').join('') + (legs.length > 3 ? '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">ほか' + (legs.length - 3) + '件</button>' : '') + '</div>';
   }
   // 行き先と結びつけない「駅だけ」の乗る位置（出る時刻を設定しなくても使える）
   const KEY_SOLO = "departure_ride_solo_v1";
@@ -674,15 +684,15 @@
   function saveRideOwner(o) { if (o === solo) store(KEY_SOLO, solo.ride); else savePlaces(); }
   function legsHtml(p) {
     const legs = p.ride || [];
-    return legs.map((l) => '<button class="leg" data-leg="' + escapeHtml(p.id) + '|' + escapeHtml(l.id) + '"><div class="leg-top"><span class="leg-where">' + escapeHtml(l.where || '（駅を未入力）') + '</span><span class="leg-pos">' + POS_LABEL[l.pos] + (l.car ? '・' + escapeHtml(l.car) : '') + '</span></div>' + trainHtml(l.pos) + (l.note ? '<div class="leg-sub">' + escapeHtml(l.note) + '</div>' : '') + '</button>').join('');
+    return legs.map((l) => '<button class="leg" data-leg="' + escapeHtml(p.id) + '|' + escapeHtml(l.id) + '"><div class="leg-top"><span class="leg-where">' + escapeHtml(routeText(l)) + (l.line ? '<span class="leg-line" style="display:block">' + escapeHtml(l.line) + '</span>' : '') + '</span><span class="leg-pos">' + POS_LABEL[l.pos] + (l.car ? '・' + escapeHtml(l.car) : '') + '</span></div>' + trainHtml(l.pos) + (l.note ? '<div class="leg-sub">' + escapeHtml(l.note) + '</div>' : '') + '</button>').join('');
   }
   function renderRide() {
     const soloHtml = '<div class="ride-place solo" data-rplace="' + SOLO_ID + '"><h3>駅だけ<span class="solo-sub">行き先・時刻なし</span></h3>' + legsHtml(solo) +
-      '<button class="leg-add" data-legadd="' + SOLO_ID + '">＋ 駅を追加</button></div>';
+      '<button class="leg-add" data-legadd="' + SOLO_ID + '">＋ 区間を追加</button></div>';
     const placesHtml = places.map((p) => {
       const legs = p.ride || [];
       return '<div class="ride-place" data-rplace="' + escapeHtml(p.id) + '"><h3>' + escapeHtml(p.name) + '</h3>' + legsHtml(p) +
-        '<button class="leg-add" data-legadd="' + escapeHtml(p.id) + '">＋ ' + (legs.length ? '乗り換えの駅を追加' : '乗る位置を追加') + '</button></div>';
+        '<button class="leg-add" data-legadd="' + escapeHtml(p.id) + '">＋ ' + (legs.length ? '乗り換え後の区間を追加' : '乗る位置を追加') + '</button></div>';
     }).join('');
     $("rideList").innerHTML = soloHtml + (placesHtml ? '<div class="ride-sec">行き先ごと</div>' + placesHtml : '');
   }
@@ -698,7 +708,7 @@
     const l = lid ? (p.ride || []).find((x) => x.id === lid) : null;
     rideEdit = { pid, lid: l ? l.id : null };
     $("rideTitle").textContent = p === solo ? "乗る位置（駅だけ）" : p.name + "：乗る位置";
-    $("rWhere").value = l ? l.where || "" : ""; $("rCar").value = l ? l.car || "" : ""; $("rNote").value = l ? l.note || "" : "";
+    $("rWhere").value = l ? l.where || "" : ""; $("rTo").value = l ? l.to || "" : ""; $("rLine").value = l ? l.line || "" : ""; $("rCar").value = l ? l.car || "" : ""; $("rNote").value = l ? l.note || "" : "";
     setPos(l ? l.pos : "back");
     $("rideDel").style.display = l ? "block" : "none";
     $("rideOverlay").classList.add("open");
@@ -707,8 +717,8 @@
   function closeRide() { rideEdit = null; $("rideOverlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); }
   $("rideSave").onclick = () => {
     if (!rideEdit) return; const p = rideOwner(rideEdit.pid); if (!p) return;
-    const v = { where: $("rWhere").value.trim(), pos: ridePos, car: $("rCar").value.trim(), note: $("rNote").value.trim() };
-    if (!v.where) { uiToast("駅・路線を入れてください"); return; }
+    const v = { where: $("rWhere").value.trim(), to: $("rTo").value.trim(), line: $("rLine").value.trim(), pos: ridePos, car: $("rCar").value.trim(), note: $("rNote").value.trim() };
+    if (!v.where) { uiToast("乗る駅を入れてください"); return; }
     p.ride = p.ride || [];
     if (rideEdit.lid) p.ride = p.ride.map((x) => x.id === rideEdit.lid ? Object.assign({}, x, v) : x);
     else p.ride.push(Object.assign({ id: String(Date.now()) }, v));
