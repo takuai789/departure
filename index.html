@@ -109,6 +109,24 @@
   .edit-link { margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: #fff; opacity: .9; font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 0; }
   .result-note { margin-top: 10px; padding-top: 10px; border-top: .5px solid rgba(255,255,255,.35); font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
   .note-mark { margin-right: 6px; opacity: .8; }
+  .tips-btn { margin-top: 12px; width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: rgba(255,255,255,.18); border: 0; border-radius: 12px; padding: 10px 12px; color: #fff; font: inherit; cursor: pointer; }
+  .tips-btn:active { background: rgba(255,255,255,.28); }
+  .tips-btn .tb-mark { flex: none; font-size: 12px; font-weight: 700; background: #fff; color: var(--accent); border-radius: 6px; padding: 2px 7px; }
+  .tips-btn .tb-text { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tips-btn .tb-more { flex: none; font-size: 13px; opacity: .85; }
+  .tips-btn.empty { background: none; border: 1px dashed rgba(255,255,255,.55); }
+  .tips-btn.empty .tb-text { font-weight: 500; opacity: .9; }
+  .tips-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 4px; }
+  .tip-row { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 12px; padding: 4px 6px 4px 12px; }
+  .tip-row .tip-dot { flex: none; color: var(--accent); font-weight: 700; }
+  .tip-row input { flex: 1; min-width: 0; border: 0; background: none; font-size: 16px; color: var(--ink); padding: 10px 0; }
+  .tip-row input:focus { outline: none; }
+  .tip-row .tip-del { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--tertiary); font-size: 16px; cursor: pointer; }
+  .tip-add { display: flex; gap: 8px; margin-top: 12px; }
+  .tip-add input { flex: 1; min-width: 0; }
+  .tip-add button { flex: none; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; padding: 0 16px; cursor: pointer; }
+  .tips-empty { font-size: 14px; color: var(--muted); line-height: 1.6; padding: 6px 4px 2px; }
+  .tips-hint { font-size: 12.5px; color: var(--muted); margin: 10px 4px 0; line-height: 1.5; }
   .empty { padding: 28px; text-align: center; color: var(--muted); background: var(--card); border-radius: 12px; }
 
   /* お気に入り・履歴 */
@@ -251,10 +269,23 @@
       <input class="field" id="fWeekend" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄なら平日と同じ" />
       <label class="field-label">出る前の準備時間（分・任意）</label>
       <input class="field" id="fPrep" type="number" inputmode="numeric" autocomplete="off" placeholder="身支度など。入れると「準備を始める時刻」も出ます" />
-      <label class="field-label">メモ（任意）</label>
-      <textarea class="field" id="fNote" rows="3" autocomplete="off" placeholder="東口から徒歩5分 など"></textarea>
       <button class="save-btn" id="saveBtn">保存</button>
       <button class="delete-btn" id="deleteBtn" style="display:none">この行き先を削除</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="tipsOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title" id="tipsTitle">注意点</h2>
+        <button class="icon-btn" id="tipsClose">×</button>
+      </div>
+      <div class="tips-list" id="tipsList"></div>
+      <div class="tip-add">
+        <input class="field" id="tipNew" placeholder="例：電車は後ろの車両に乗る" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+        <button id="tipAddBtn">追加</button>
+      </div>
+      <div class="tips-hint">行き先ごとに覚えておきたいことを1行ずつ。押すと書き直せます。</div>
     </div>
   </div>
 
@@ -266,7 +297,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.9.0";
+  const APP_VERSION = "3.10.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -277,6 +308,9 @@
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
   let places = load(KEY, DEFAULTS.slice());
+  // 旧「メモ」を注意点（1行ずつ）へ引き継ぐ。note 自体は消さずに残す
+  const fillTips = () => places.forEach((p) => { if (!Array.isArray(p.tips)) p.tips = (p.note || "").split(/\n+/).map((s) => s.trim()).filter(Boolean); });
+  fillTips();
   let history = load(KEY_HIST, []);
   let favorites = load(KEY_FAV, []);
   const savePlaces = () => store(KEY, places);
@@ -351,8 +385,13 @@
         '</div>' +
         (r.weekendDiff ? '<div class="wk-note">土日の移動時間（' + r.p.weekendTravel + '分）で計算しています</div>' : '') +
         '<button class="edit-link" data-editplace="' + escapeHtml(r.p.id) + '">' + escapeHtml(r.p.name) + 'の設定を変更 ›</button>' +
-        (r.p.note && r.p.note.trim() ? '<div class="result-note"><span class="note-mark">メモ</span>' + escapeHtml(r.p.note) + '</div>' : '') +
+        tipsBtnHtml(r.p) +
       '</div>';
+  }
+  function tipsBtnHtml(p) {
+    const t = p.tips || [];
+    if (!t.length) return '<button class="tips-btn empty" data-tips="' + escapeHtml(p.id) + '"><span class="tb-text">＋ ' + escapeHtml(p.name) + 'の注意点を書く</span></button>';
+    return '<button class="tips-btn" data-tips="' + escapeHtml(p.id) + '"><span class="tb-mark">注意点 ' + t.length + '</span><span class="tb-text">' + escapeHtml(t[0]) + '</span><span class="tb-more">' + (t.length > 1 ? 'ほか' + (t.length - 1) + '件 ' : '') + '›</span></button>';
   }
   // 時刻を変えたら、その行き先の「いつもの到着時刻」として覚える
   function changed(n, { remember = true } = {}) {
@@ -382,6 +421,7 @@
       if (t.closest("[data-step]")) return step(n, +t.closest("[data-step]").dataset.step);
       if (t.closest("[data-buf]")) { panels[n].buf = +t.closest("[data-buf]").dataset.buf; saveQ(n); renderPanel(n); return; }
       if (t.closest("[data-editplace]")) return openEditor(t.closest("[data-editplace]").dataset.editplace);
+      if (t.closest("[data-tips]")) return openTips(t.closest("[data-tips]").dataset.tips);
     });
     el.addEventListener("change", (e) => {
       if (e.target.matches("[data-h]")) { panels[n].h = e.target.value; changed(n); }
@@ -524,7 +564,6 @@
     $("fTravel").value = p ? p.travel : 30;
     $("fWeekend").value = p && p.weekendTravel ? p.weekendTravel : "";
     $("fPrep").value = p && p.prep ? p.prep : "";
-    $("fNote").value = p && p.note ? p.note : "";
     $("deleteBtn").style.display = isNew ? "none" : "block";
     $("overlay").classList.add("open");
     if (isNew) setTimeout(() => $("fPlace").focus(), 50);
@@ -532,9 +571,9 @@
   function closeEditor() { editingId = null; $("overlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); }
   $("saveBtn").onclick = () => {
     const name = $("fPlace").value.trim(); if (!name) return;
-    const vals = { name, travel: Number($("fTravel").value) || 0, weekendTravel: Number($("fWeekend").value) || 0, prep: Number($("fPrep").value) || 0, note: $("fNote").value.trim() };
+    const vals = { name, travel: Number($("fTravel").value) || 0, weekendTravel: Number($("fWeekend").value) || 0, prep: Number($("fPrep").value) || 0 };
     if (editingId === "new") {
-      const np = Object.assign({ id: String(Date.now()) }, vals); places.push(np);
+      const np = Object.assign({ id: String(Date.now()), tips: [] }, vals); places.push(np);
       panels[editingFor].destId = np.id; saveQ(editingFor);
     } else places = places.map((p) => p.id === editingId ? Object.assign({}, p, vals) : p);
     savePlaces(); closeEditor(); renderAll();
@@ -542,6 +581,40 @@
   $("deleteBtn").onclick = () => { const id = editingId; closeEditor(); removeItem(id); };
   $("closeBtn").onclick = closeEditor;
   $("overlay").onclick = (e) => { if (e.target.id === "overlay") closeEditor(); };
+  // ---------- 注意点シート ----------
+  let tipsId = null;
+  function renderTips() {
+    const p = placeById(tipsId); if (!p) return;
+    $("tipsTitle").textContent = p.name + "の注意点";
+    const t = p.tips || [];
+    $("tipsList").innerHTML = t.length
+      ? t.map((s, i) => '<div class="tip-row"><span class="tip-dot">・</span><input data-tip="' + i + '" value="' + escapeHtml(s) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" /><button class="tip-del" data-tipdel="' + i + '" aria-label="消す">✕</button></div>').join("")
+      : '<div class="tips-empty">まだありません。「電車は後ろに乗る」「3番出口が近い」など、行くたびに思い出したいことを書いておけます。</div>';
+  }
+  function openTips(id) { tipsId = id; renderTips(); $("tipNew").value = ""; $("tipsOverlay").classList.add("open"); }
+  function closeTips() { tipsId = null; $("tipsOverlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); renderResult(1); if (compareOn) renderResult(2); }
+  function saveTips(p) { savePlaces(); }
+  function addTip() {
+    const p = placeById(tipsId), v = $("tipNew").value.trim(); if (!p || !v) return;
+    p.tips = (p.tips || []).concat([v]); saveTips(p); $("tipNew").value = ""; renderTips();
+  }
+  $("tipAddBtn").onclick = addTip;
+  $("tipNew").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); addTip(); } });
+  $("tipsList").addEventListener("change", (e) => {
+    const i = e.target.dataset.tip; if (i === undefined) return;
+    const p = placeById(tipsId); if (!p) return;
+    const v = e.target.value.trim();
+    if (v) p.tips[+i] = v; else p.tips.splice(+i, 1);
+    saveTips(p); renderTips();
+  });
+  $("tipsList").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing && e.target.dataset.tip !== undefined) e.target.blur(); });
+  $("tipsList").addEventListener("click", (e) => {
+    const d = e.target.closest("[data-tipdel]"); if (!d) return;
+    const p = placeById(tipsId); if (!p) return;
+    p.tips.splice(+d.dataset.tipdel, 1); saveTips(p); renderTips();
+  });
+  $("tipsClose").onclick = closeTips;
+  $("tipsOverlay").onclick = (e) => { if (e.target.id === "tipsOverlay") closeTips(); };
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   // ---------- バックアップ（全アプリ共通の作法） ----------
   const BK_KEY = "departure_lastBackupAt", SCHEMA = "departure.v1";
@@ -582,7 +655,7 @@
       const data = JSON.parse(await f.text());
       if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("ナンジデルのデータではないようです"); return; }
       if (!(await uiAsk("いまの行き先・履歴・お気に入りを、このファイルの内容に置き換えますか？", "置き換える"))) return;
-      places = data.places; history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
+      places = data.places; fillTips(); history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
       savePlaces(); saveHistory(); saveFavorites();
       if (data.q1) store(KEY_Q1, data.q1);
       if (data.q2) store(KEY_Q2, data.q2);
