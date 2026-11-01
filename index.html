@@ -69,9 +69,10 @@
   /* PCで1つだけのとき：左に入力、右に結果。下の一覧も左右に並べて、横幅を活かす */
   @media (min-width: 900px) {
     body:not(.compare) .shell { max-width: 980px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
-    body:not(.compare) .shell > * { grid-column: 1 / -1; }
-    body:not(.compare) .shell > #usualSec { grid-column: 1; }
-    body:not(.compare) .shell > #dataSec { grid-column: 2; margin-top: 26px; }
+    body:not(.compare) .shell > *, body:not(.compare) #tabTime > * { grid-column: 1 / -1; }
+    body:not(.compare) #tabTime > #usualSec { grid-column: 1; }
+    body:not(.compare) #tabTime > #dataSec { grid-column: 2; margin-top: 26px; }
+    body:not(.compare) #tabRide { max-width: 560px; width: 100%; justify-self: center; }
     body:not(.compare) #panel1 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; align-items: start; }
     body:not(.compare) #panel1 > .card { grid-column: 1; }
     body:not(.compare) #panel1 > .res { grid-column: 2; grid-row: 1 / span 4; position: sticky; top: 16px; }
@@ -213,6 +214,39 @@
   .row .grip { width: 30px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--tertiary); font-size: 18px; cursor: grab; touch-action: none; }
   .row.dragging { box-shadow: 0 8px 20px rgba(0,0,0,.18); position: relative; z-index: 5; }
   .row .row-name { cursor: pointer; }
+  /* タブ */
+  #tabTime { display: contents; }
+  #tabTime[hidden], #tabRide[hidden] { display: none; }
+  body { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; display: flex; justify-content: center; gap: 0; background: rgba(249,249,249,.94); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-top: .5px solid var(--sep); padding: 6px 0 calc(env(safe-area-inset-bottom) + 4px); }
+  .tabbar button { flex: 0 1 160px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 600; color: rgba(60,60,67,.55); padding: 2px 0; cursor: pointer; }
+  .tabbar button svg { width: 26px; height: 26px; }
+  .tabbar button.on { color: var(--accent); }
+  /* 乗る位置 */
+  .ride-intro { font-size: 13px; color: var(--muted); margin: 0 4px 12px; line-height: 1.6; }
+  .ride-place { background: var(--card); border-radius: 14px; padding: 12px 14px 6px; margin-bottom: 12px; }
+  .ride-place.flash { animation: flash 1.2s ease; }
+  @keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .ride-place h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .leg { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 10px 0; border-top: .5px solid var(--sep); cursor: pointer; color: var(--ink); font: inherit; }
+  .ride-place h3 + .leg { border-top: 0; }
+  .leg-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .leg-where { font-size: 15px; font-weight: 600; }
+  .leg-pos { flex: none; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .leg-sub { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .train { display: flex; align-items: center; gap: 3px; margin-top: 8px; }
+  .train .car { flex: 1; height: 14px; border-radius: 3px; background: var(--fill); }
+  .train .car.hit { background: var(--accent); }
+  .train .car.head { border-top-right-radius: 8px; border-bottom-right-radius: 3px; }
+  .train .dir { flex: none; font-size: 10.5px; color: var(--muted); margin-left: 4px; white-space: nowrap; }
+  .leg-add { display: block; width: 100%; border: 0; border-top: .5px solid var(--sep); background: none; color: var(--accent); font-size: 15px; font-weight: 600; text-align: left; padding: 11px 0 9px; cursor: pointer; }
+  .ride-place h3 + .leg-add { border-top: 0; }
+  .ride-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .ride-chip { border: 0; background: rgba(255,255,255,.18); color: #fff; border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ride-chip b { font-weight: 800; }
+  .pos-seg { display: flex; background: var(--fill); border-radius: 10px; padding: 2px; }
+  .pos-seg button { flex: 1; border: 0; background: none; font-size: 15px; font-weight: 600; padding: 9px 4px; border-radius: 8px; color: var(--ink); cursor: pointer; }
+  .pos-seg button.on { background: var(--accent); color: #fff; }
   .usual-count { font-size: 12px; color: var(--tertiary); margin-left: 6px; }
 </style>
 </head>
@@ -223,6 +257,7 @@
       <p class="sub">着きたい時刻から、家を出る時刻を逆算します</p>
     </header>
 
+    <div id="tabTime">
     <div class="chips-head">
       <span class="chips-title" id="chipsTitle">行き先</span>
       <span><button class="cmp-toggle" id="cmpToggle">2つ並べて比べる</button><button class="edit-toggle" id="editToggle">編集</button></span>
@@ -251,6 +286,12 @@
       </div>
       <div class="data-note" id="bkNote"></div>
     </div>
+    </div>
+
+    <div id="tabRide" hidden>
+      <p class="ride-intro">行き先ごとに、駅で乗る車両の位置を覚えておけます。乗り換えがあるときは駅ごとに足せます。</p>
+      <div id="rideList"></div>
+    </div>
 
     <footer><span id="versionText"></span></footer>
   </div>
@@ -271,6 +312,30 @@
       <input class="field" id="fPrep" type="number" inputmode="numeric" autocomplete="off" placeholder="身支度など。入れると「準備を始める時刻」も出ます" />
       <button class="save-btn" id="saveBtn">保存</button>
       <button class="delete-btn" id="deleteBtn" style="display:none">この行き先を削除</button>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <button data-tab="time" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>出る時刻</button>
+    <button data-tab="ride"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg>乗る位置</button>
+  </nav>
+
+  <div class="overlay" id="rideOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title" id="rideTitle">乗る位置</h2>
+        <button class="icon-btn" id="rideClose">×</button>
+      </div>
+      <label class="field-label">どこで乗る？（駅・路線）</label>
+      <input class="field" id="rWhere" placeholder="例：池袋（有楽町線）" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <label class="field-label">位置</label>
+      <div class="pos-seg" id="rPos"><button data-pos="back">後ろ寄り</button><button data-pos="mid">真ん中</button><button data-pos="front">先頭寄り</button></div>
+      <label class="field-label">号車・ドア（任意）</label>
+      <input class="field" id="rCar" placeholder="例：8号車 3番ドア" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <label class="field-label">理由・メモ（任意）</label>
+      <input class="field" id="rNote" placeholder="例：降りてすぐ階段、乗り換えが近い" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button class="save-btn" id="rideSave">保存</button>
+      <button class="delete-btn" id="rideDel" style="display:none">この位置を削除</button>
     </div>
   </div>
 
@@ -297,7 +362,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.10.0";
+  const APP_VERSION = "3.11.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -385,6 +450,7 @@
         '</div>' +
         (r.weekendDiff ? '<div class="wk-note">土日の移動時間（' + r.p.weekendTravel + '分）で計算しています</div>' : '') +
         '<button class="edit-link" data-editplace="' + escapeHtml(r.p.id) + '">' + escapeHtml(r.p.name) + 'の設定を変更 ›</button>' +
+        rideChipsHtml(r.p) +
         tipsBtnHtml(r.p) +
       '</div>';
   }
@@ -422,6 +488,7 @@
       if (t.closest("[data-buf]")) { panels[n].buf = +t.closest("[data-buf]").dataset.buf; saveQ(n); renderPanel(n); return; }
       if (t.closest("[data-editplace]")) return openEditor(t.closest("[data-editplace]").dataset.editplace);
       if (t.closest("[data-tips]")) return openTips(t.closest("[data-tips]").dataset.tips);
+      if (t.closest("[data-ridego]")) return showTab("ride", t.closest("[data-ridego]").dataset.ridego);
     });
     el.addEventListener("change", (e) => {
       if (e.target.matches("[data-h]")) { panels[n].h = e.target.value; changed(n); }
@@ -553,6 +620,7 @@
   function applyCompare() { document.body.classList.toggle("compare", compareOn); $("cmpToggle").textContent = compareOn ? "比べるのをやめる" : "2つ並べて比べる"; if (compareOn) renderPanel(2); }
   $("cmpToggle").onclick = () => { compareOn = !compareOn; try { localStorage.setItem(CMP_KEY, compareOn ? "1" : "0"); } catch (e) {} applyCompare(); };
   applyCompare();
+  setTimeout(() => { let t = 'time'; try { t = localStorage.getItem(TAB_KEY) || 'time'; } catch (e) {} if (t === 'ride') showTab('ride'); }, 0);
 
   // ---------- 行き先の編集シート ----------
   let editingFor = 1;
@@ -581,6 +649,82 @@
   $("deleteBtn").onclick = () => { const id = editingId; closeEditor(); removeItem(id); };
   $("closeBtn").onclick = closeEditor;
   $("overlay").onclick = (e) => { if (e.target.id === "overlay") closeEditor(); };
+  // ---------- 乗る位置（タブ） ----------
+  // place.ride = [{ id, where, pos: 'front'|'mid'|'back', car, note }]
+  const POS_LABEL = { front: "先頭寄り", mid: "真ん中", back: "後ろ寄り" };
+  const POS_CARS = { back: [0, 1, 2], mid: [4, 5], front: [7, 8, 9] };
+  function trainHtml(pos) {
+    const hit = POS_CARS[pos] || [];
+    let s = '<div class="train">';
+    for (let i = 0; i < 10; i++) s += '<span class="car' + (hit.includes(i) ? ' hit' : '') + (i === 9 ? ' head' : '') + '"></span>';
+    return s + '<span class="dir">進行方向 ▶</span></div>';
+  }
+  function rideChipsHtml(p) {
+    const legs = p.ride || [];
+    if (!legs.length) return '';
+    return '<div class="ride-chips">' + legs.slice(0, 3).map((l) => '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">🚃 ' + escapeHtml(l.where || '駅') + ' <b>' + POS_LABEL[l.pos] + '</b>' + (l.car ? '・' + escapeHtml(l.car) : '') + '</button>').join('') + (legs.length > 3 ? '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">ほか' + (legs.length - 3) + '件</button>' : '') + '</div>';
+  }
+  function renderRide() {
+    $("rideList").innerHTML = places.length ? places.map((p) => {
+      const legs = p.ride || [];
+      return '<div class="ride-place" data-rplace="' + escapeHtml(p.id) + '"><h3>' + escapeHtml(p.name) + '</h3>' +
+        legs.map((l) => '<button class="leg" data-leg="' + escapeHtml(p.id) + '|' + escapeHtml(l.id) + '"><div class="leg-top"><span class="leg-where">' + escapeHtml(l.where || '（駅を未入力）') + '</span><span class="leg-pos">' + POS_LABEL[l.pos] + (l.car ? '・' + escapeHtml(l.car) : '') + '</span></div>' + trainHtml(l.pos) + (l.note ? '<div class="leg-sub">' + escapeHtml(l.note) + '</div>' : '') + '</button>').join('') +
+        '<button class="leg-add" data-legadd="' + escapeHtml(p.id) + '">＋ ' + (legs.length ? '乗り換えの駅を追加' : '乗る位置を追加') + '</button></div>';
+    }).join('') : '<div class="empty">まず「出る時刻」で行き先を追加してください。</div>';
+  }
+  $("rideList").addEventListener("click", (e) => {
+    const l = e.target.closest("[data-leg]"); if (l) { const [pid, lid] = l.dataset.leg.split("|"); return openRide(pid, lid); }
+    const ad = e.target.closest("[data-legadd]"); if (ad) return openRide(ad.dataset.legadd, null);
+  });
+  let rideEdit = null, ridePos = "back";
+  function setPos(v) { ridePos = v; $("rPos").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.pos === v)); }
+  $("rPos").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) setPos(b.dataset.pos); });
+  function openRide(pid, lid) {
+    const p = placeById(pid); if (!p) return;
+    const l = lid ? (p.ride || []).find((x) => x.id === lid) : null;
+    rideEdit = { pid, lid: l ? l.id : null };
+    $("rideTitle").textContent = p.name + "：乗る位置";
+    $("rWhere").value = l ? l.where || "" : ""; $("rCar").value = l ? l.car || "" : ""; $("rNote").value = l ? l.note || "" : "";
+    setPos(l ? l.pos : "back");
+    $("rideDel").style.display = l ? "block" : "none";
+    $("rideOverlay").classList.add("open");
+    if (!l) setTimeout(() => $("rWhere").focus(), 50);
+  }
+  function closeRide() { rideEdit = null; $("rideOverlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); }
+  $("rideSave").onclick = () => {
+    if (!rideEdit) return; const p = placeById(rideEdit.pid); if (!p) return;
+    const v = { where: $("rWhere").value.trim(), pos: ridePos, car: $("rCar").value.trim(), note: $("rNote").value.trim() };
+    if (!v.where) { uiToast("駅・路線を入れてください"); return; }
+    p.ride = p.ride || [];
+    if (rideEdit.lid) p.ride = p.ride.map((x) => x.id === rideEdit.lid ? Object.assign({}, x, v) : x);
+    else p.ride.push(Object.assign({ id: String(Date.now()) }, v));
+    savePlaces(); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
+  };
+  $("rideDel").onclick = async () => {
+    if (!rideEdit) return; const p = placeById(rideEdit.pid); if (!p) return;
+    if (!(await uiAsk("この乗る位置を削除しますか？", "削除する"))) return;
+    p.ride = (p.ride || []).filter((x) => x.id !== rideEdit.lid);
+    savePlaces(); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
+  };
+  $("rideClose").onclick = closeRide;
+  $("rideOverlay").onclick = (e) => { if (e.target.id === "rideOverlay") closeRide(); };
+  // タブの切り替え（この端末で最後に見たタブを覚える）
+  const TAB_KEY = "departure_tab_v1";
+  function showTab(tab, focusPlace) {
+    $("tabTime").hidden = tab !== "time"; $("tabRide").hidden = tab !== "ride";
+    document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+    document.querySelector(".chips-head").style.display = "";
+    try { localStorage.setItem(TAB_KEY, tab); } catch (e) {}
+    if (tab === "ride") {
+      if (editMode) { editMode = false; renderAll(); }
+      renderRide();
+      const el = focusPlace && $("rideList").querySelector('[data-rplace="' + CSS.escape(focusPlace) + '"]');
+      if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1300); }
+      else window.scrollTo(0, 0);
+    } else { renderResult(1); window.scrollTo(0, 0); }
+  }
+  document.querySelector(".tabbar").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) showTab(b.dataset.tab); });
+
   // ---------- 注意点シート ----------
   let tipsId = null;
   function renderTips() {
