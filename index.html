@@ -241,6 +241,8 @@
   .train .dir { flex: none; font-size: 10.5px; color: var(--muted); margin-left: 4px; white-space: nowrap; }
   .leg-add { display: block; width: 100%; border: 0; border-top: .5px solid var(--sep); background: none; color: var(--accent); font-size: 15px; font-weight: 600; text-align: left; padding: 11px 0 9px; cursor: pointer; }
   .ride-place h3 + .leg-add { border-top: 0; }
+  .ride-place h3 .solo-sub { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+  .ride-sec { font-size: 13px; color: var(--muted); font-weight: 500; margin: 18px 4px 8px; }
   .ride-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .ride-chip { border: 0; background: rgba(255,255,255,.18); color: #fff; border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; cursor: pointer; }
   .ride-chip b { font-weight: 800; }
@@ -289,7 +291,7 @@
     </div>
 
     <div id="tabRide" hidden>
-      <p class="ride-intro">行き先ごとに、駅で乗る車両の位置を覚えておけます。乗り換えがあるときは駅ごとに足せます。</p>
+      <p class="ride-intro">駅で乗る車両の位置を覚えておけます。出る時刻を決めない駅は「駅だけ」に、行き先と一緒に使う駅はその行き先に入れてください。</p>
       <div id="rideList"></div>
     </div>
 
@@ -362,7 +364,7 @@
   const KEY_HIST = "departure_history_v1";
   const KEY_FAV = "departure_favorites_v1";
   const HIST_MAX = 30;
-  const APP_VERSION = "3.11.0";
+  const APP_VERSION = "3.12.0";
   const VERSION = APP_VERSION;
   const $ = (id) => document.getElementById(id);
   $("versionText").textContent = "ナンジデル — v" + VERSION;
@@ -664,13 +666,25 @@
     if (!legs.length) return '';
     return '<div class="ride-chips">' + legs.slice(0, 3).map((l) => '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">🚃 ' + escapeHtml(l.where || '駅') + ' <b>' + POS_LABEL[l.pos] + '</b>' + (l.car ? '・' + escapeHtml(l.car) : '') + '</button>').join('') + (legs.length > 3 ? '<button class="ride-chip" data-ridego="' + escapeHtml(p.id) + '">ほか' + (legs.length - 3) + '件</button>' : '') + '</div>';
   }
+  // 行き先と結びつけない「駅だけ」の乗る位置（出る時刻を設定しなくても使える）
+  const KEY_SOLO = "departure_ride_solo_v1";
+  const SOLO_ID = "__solo";
+  const solo = { id: SOLO_ID, name: "駅だけ", ride: load(KEY_SOLO, []) };
+  const rideOwner = (pid) => pid === SOLO_ID ? solo : placeById(pid);
+  function saveRideOwner(o) { if (o === solo) store(KEY_SOLO, solo.ride); else savePlaces(); }
+  function legsHtml(p) {
+    const legs = p.ride || [];
+    return legs.map((l) => '<button class="leg" data-leg="' + escapeHtml(p.id) + '|' + escapeHtml(l.id) + '"><div class="leg-top"><span class="leg-where">' + escapeHtml(l.where || '（駅を未入力）') + '</span><span class="leg-pos">' + POS_LABEL[l.pos] + (l.car ? '・' + escapeHtml(l.car) : '') + '</span></div>' + trainHtml(l.pos) + (l.note ? '<div class="leg-sub">' + escapeHtml(l.note) + '</div>' : '') + '</button>').join('');
+  }
   function renderRide() {
-    $("rideList").innerHTML = places.length ? places.map((p) => {
+    const soloHtml = '<div class="ride-place solo" data-rplace="' + SOLO_ID + '"><h3>駅だけ<span class="solo-sub">行き先・時刻なし</span></h3>' + legsHtml(solo) +
+      '<button class="leg-add" data-legadd="' + SOLO_ID + '">＋ 駅を追加</button></div>';
+    const placesHtml = places.map((p) => {
       const legs = p.ride || [];
-      return '<div class="ride-place" data-rplace="' + escapeHtml(p.id) + '"><h3>' + escapeHtml(p.name) + '</h3>' +
-        legs.map((l) => '<button class="leg" data-leg="' + escapeHtml(p.id) + '|' + escapeHtml(l.id) + '"><div class="leg-top"><span class="leg-where">' + escapeHtml(l.where || '（駅を未入力）') + '</span><span class="leg-pos">' + POS_LABEL[l.pos] + (l.car ? '・' + escapeHtml(l.car) : '') + '</span></div>' + trainHtml(l.pos) + (l.note ? '<div class="leg-sub">' + escapeHtml(l.note) + '</div>' : '') + '</button>').join('') +
+      return '<div class="ride-place" data-rplace="' + escapeHtml(p.id) + '"><h3>' + escapeHtml(p.name) + '</h3>' + legsHtml(p) +
         '<button class="leg-add" data-legadd="' + escapeHtml(p.id) + '">＋ ' + (legs.length ? '乗り換えの駅を追加' : '乗る位置を追加') + '</button></div>';
-    }).join('') : '<div class="empty">まず「出る時刻」で行き先を追加してください。</div>';
+    }).join('');
+    $("rideList").innerHTML = soloHtml + (placesHtml ? '<div class="ride-sec">行き先ごと</div>' + placesHtml : '');
   }
   $("rideList").addEventListener("click", (e) => {
     const l = e.target.closest("[data-leg]"); if (l) { const [pid, lid] = l.dataset.leg.split("|"); return openRide(pid, lid); }
@@ -680,10 +694,10 @@
   function setPos(v) { ridePos = v; $("rPos").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.pos === v)); }
   $("rPos").addEventListener("click", (e) => { const b = e.target.closest("[data-pos]"); if (b) setPos(b.dataset.pos); });
   function openRide(pid, lid) {
-    const p = placeById(pid); if (!p) return;
+    const p = rideOwner(pid); if (!p) return;
     const l = lid ? (p.ride || []).find((x) => x.id === lid) : null;
     rideEdit = { pid, lid: l ? l.id : null };
-    $("rideTitle").textContent = p.name + "：乗る位置";
+    $("rideTitle").textContent = p === solo ? "乗る位置（駅だけ）" : p.name + "：乗る位置";
     $("rWhere").value = l ? l.where || "" : ""; $("rCar").value = l ? l.car || "" : ""; $("rNote").value = l ? l.note || "" : "";
     setPos(l ? l.pos : "back");
     $("rideDel").style.display = l ? "block" : "none";
@@ -692,19 +706,19 @@
   }
   function closeRide() { rideEdit = null; $("rideOverlay").classList.remove("open"); if (document.activeElement) document.activeElement.blur(); }
   $("rideSave").onclick = () => {
-    if (!rideEdit) return; const p = placeById(rideEdit.pid); if (!p) return;
+    if (!rideEdit) return; const p = rideOwner(rideEdit.pid); if (!p) return;
     const v = { where: $("rWhere").value.trim(), pos: ridePos, car: $("rCar").value.trim(), note: $("rNote").value.trim() };
     if (!v.where) { uiToast("駅・路線を入れてください"); return; }
     p.ride = p.ride || [];
     if (rideEdit.lid) p.ride = p.ride.map((x) => x.id === rideEdit.lid ? Object.assign({}, x, v) : x);
     else p.ride.push(Object.assign({ id: String(Date.now()) }, v));
-    savePlaces(); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
+    saveRideOwner(p); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
   };
   $("rideDel").onclick = async () => {
-    if (!rideEdit) return; const p = placeById(rideEdit.pid); if (!p) return;
+    if (!rideEdit) return; const p = rideOwner(rideEdit.pid); if (!p) return;
     if (!(await uiAsk("この乗る位置を削除しますか？", "削除する"))) return;
     p.ride = (p.ride || []).filter((x) => x.id !== rideEdit.lid);
-    savePlaces(); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
+    saveRideOwner(p); closeRide(); renderRide(); renderResult(1); if (compareOn) renderResult(2);
   };
   $("rideClose").onclick = closeRide;
   $("rideOverlay").onclick = (e) => { if (e.target.id === "rideOverlay") closeRide(); };
@@ -787,7 +801,7 @@
   function bkText() { let t = 0; try { t = Number(localStorage.getItem(BK_KEY) || 0); } catch (e) {} if (!t) return "まだ一度もバックアップしていません。データはこの端末の中だけにあります。"; const d = Math.floor((Date.now() - t) / 86400000); return (d === 0 ? "前回のバックアップ：今日" : "前回のバックアップから " + d + "日") + "。データはこの端末の中だけにあります。"; }
   function renderBk() { $("bkNote").textContent = bkText(); }
   $("exportBtn").onclick = async () => {
-    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places, history, favorites, q1: panels[1], q2: panels[2] };
+    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places, history, favorites, q1: panels[1], q2: panels[2], rideSolo: solo.ride };
     if (await bkSave(JSON.stringify(data, null, 2)) !== "ok") return;
     try { localStorage.setItem(BK_KEY, String(Date.now())); } catch (e) {}
     renderBk(); uiToast("書き出しました");
@@ -799,7 +813,7 @@
       const data = JSON.parse(await f.text());
       if (data.schema !== SCHEMA || !Array.isArray(data.places)) { uiToast("ナンジデルのデータではないようです"); return; }
       if (!(await uiAsk("いまの行き先・履歴・お気に入りを、このファイルの内容に置き換えますか？", "置き換える"))) return;
-      places = data.places; fillTips(); history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
+      places = data.places; fillTips(); if (Array.isArray(data.rideSolo)) { solo.ride = data.rideSolo; store(KEY_SOLO, solo.ride); } history = Array.isArray(data.history) ? data.history : []; favorites = Array.isArray(data.favorites) ? data.favorites : [];
       savePlaces(); saveHistory(); saveFavorites();
       if (data.q1) store(KEY_Q1, data.q1);
       if (data.q2) store(KEY_Q2, data.q2);
